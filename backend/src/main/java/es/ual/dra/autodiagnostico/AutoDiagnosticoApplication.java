@@ -1,4 +1,4 @@
-package es.ual.dra.optcg;
+package es.ual.dra.autodiagnostico;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
