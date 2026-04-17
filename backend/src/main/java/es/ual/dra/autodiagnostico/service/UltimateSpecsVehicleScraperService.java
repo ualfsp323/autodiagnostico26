@@ -13,21 +13,25 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import javax.imageio.ImageIO;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 
 import es.ual.dra.autodiagnostico.repository.VehicleRepository;
 
 /**
- * Servicio encargado de realizar el scraping de datos de vehículos y sus
- * productos asociados.
+ * Servicio encargado de realizar el scraping de datos de vehículos
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class UltimateSpecsVehicleScraperService {
-
-        private final VehicleRepository vehicleRepository;
 
         @Transactional
         public void scrapeAndSave() throws IOException {
@@ -47,10 +51,15 @@ public class UltimateSpecsVehicleScraperService {
                 File outputDir = new File("logos");
                 outputDir.mkdirs();
 
+                List<Map<String, Object>> allBrandsData = new ArrayList<>();
+
                 for (Element brand : brands) {
+                        Map<String, Object> brandData = new HashMap<>();
 
                         String brandName = brand.select(".home_brand").text();
                         Element img = brand.selectFirst(".home_brand_logo img");
+
+                        brandData.put("brandName", brandName);
 
                         String spriteUrl = "";
                         int x = 0;
@@ -100,27 +109,35 @@ public class UltimateSpecsVehicleScraperService {
                         // ===========================
                         // NEW: scrape models per brand
                         // ===========================
-                        scrapeModelsForBrand(brand);
+                        List<Map<String, Object>> modelsData = scrapeModelsForBrand(brand);
+                        brandData.put("models", modelsData);
+                        allBrandsData.add(brandData);
                 }
+
+                // Save all collected data to JSON
+                ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
+                mapper.writeValue(new File("scraped_data.json"), allBrandsData);
+                log.info("Data saved to scraped_data.json");
         }
 
         /**
          * SECOND LEVEL SCRAPER:
          * Extracts models from each brand page
          */
-        private void scrapeModelsForBrand(Element brandElement) throws IOException {
+        private List<Map<String, Object>> scrapeModelsForBrand(Element brandElement) throws IOException {
 
-                Element link = brandElement.parent().selectFirst("a[href]");
-                if (link == null) {
+                List<Map<String, Object>> modelsData = new ArrayList<>();
+                Element brandLink = brandElement.parent().selectFirst("a[href]");
+                if (brandLink == null) {
                         System.out.println("NO LINK");
-                        return;
+                        return modelsData;
                 }
 
-                String brandUrl = link.absUrl("href");
+                String brandUrl = brandLink.absUrl("href");
 
                 if (brandUrl == null || brandUrl.isEmpty()) {
                         System.out.println("NO BRAND URL");
-                        return;
+                        return modelsData;
                 }
 
                 log.info("Navigating to brand page: {}", brandUrl);
@@ -135,11 +152,46 @@ public class UltimateSpecsVehicleScraperService {
                 File outputDir = new File("models");
                 outputDir.mkdirs();
                 for (Element a : models) {
+                        Map<String, Object> modelData = new HashMap<>();
 
                         Element img = a.selectFirst("img");
                         Element title = a.selectFirst("h2");
 
+                        Element link = a.selectFirst("a[href]");
+                        if (link == null) {
+                                link = a; // The element itself is likely the link
+                        }
+
+                        String modelUrl = link.absUrl("href");
+                        modelData.put("url", modelUrl);
+
+                        Document modelDoc = Jsoup.connect(modelUrl)
+                                        .userAgent("Mozilla/5.0")
+                                        .timeout(10000)
+                                        .get();
+
+                        List<Map<String, Object>> versionsList = new ArrayList<>();
+
+                        // A div with id versions exists only when this page is final
+                        Element versionsDiv = modelDoc.selectFirst("#versions");
+
+                        if (versionsDiv == null) {
+                                System.out.println("TWO OR MORE VERSIONS, NOT FINAL PAGE");
+                                Element modelVersions = modelDoc.select("a[href]");
+
+                                for (Element version : modelVersions) {
+                                        String versionUrl = version.absUrl("href");
+                                        versionsList.add(scrapeVersion(versionUrl));
+                                }
+                        } else {
+                                System.out.println("FINAL PAGE, SCRAPING VERSION");
+                                versionsList.add(scrapeVersion(modelUrl));
+                        }
+
+                        modelData.put("versions", versionsList);
+
                         String modelName = title != null ? title.text() : "unknown";
+                        modelData.put("modelName", modelName);
 
                         String imageUrl = "";
                         if (img != null) {
@@ -148,13 +200,87 @@ public class UltimateSpecsVehicleScraperService {
                                         imageUrl = "https:" + img.attr("src"); // fallback for // URLs
                                 }
                         }
+                        modelData.put("imageUrl", imageUrl);
 
                         System.out.println(modelName + " -> " + imageUrl);
 
                         if (!imageUrl.isEmpty()) {
                                 downloadModelImage(imageUrl, brandUrl, modelName);
                         }
+                        modelsData.add(modelData);
                 }
+                return modelsData;
+        }
+
+        private Map<String, Object> scrapeVersion(String urlFinalModel) {
+                Map<String, Object> versionData = new HashMap<>();
+                versionData.put("url", urlFinalModel);
+                try {
+                        Document doc = Jsoup.connect(urlFinalModel)
+                                        .userAgent("Mozilla/5.0")
+                                        .timeout(10000)
+                                        .get();
+
+                        Element img = doc.selectFirst(".left_column_top_model_image_div");
+
+                        // I'm searching a div with class resumo_ficha
+                        Element resumo_ficha = doc.selectFirst(".resumo_ficha");
+
+                        if (resumo_ficha != null) {
+                                // I need the div inside the div with class col-12 with a h2 with class
+                                // post_title_12
+                                Element specContainer = resumo_ficha.selectFirst(".margin-left:10px;margin-top:5px");
+
+                                if (specContainer != null) {
+                                        // Specifications should have a div with i class fa fa-dot-circle with bold text
+                                        // with meaningful data
+                                        Elements specsElements = specContainer.select(".fa-dot-circle");
+
+                                        // Each specificatio nhas a bold text with the title of the specification and a
+                                        // span with the actual value, which can have sup tags or similar
+                                        Map<String, String> specsMap = new HashMap<>();
+                                        for (Element specification : specsElements) {
+                                                Element title = specification.selectFirst("b");
+                                                Element value = specification.selectFirst("span");
+                                                if (title != null && value != null) {
+                                                        System.out.println(title.text() + " -> " + value.text());
+                                                        specsMap.put(title.text(), value.text());
+                                                }
+                                        }
+                                        versionData.put("specifications", specsMap);
+                                }
+                        }
+
+                        // Search a div with class table_versions and extact all the table
+                        // information
+                        Element table_versions = doc.selectFirst(".table_versions");
+
+                        if (table_versions != null) {
+                                // The table has a thead with th elements with the headers
+                                Element thead = table_versions.selectFirst("thead");
+                                Elements headers = thead != null ? thead.select("th") : new Elements();
+
+                                // The table has a tbody with tr elements with the data
+                                Element tbody = table_versions.selectFirst("tbody");
+                                Elements rows = tbody != null ? tbody.select("tr") : new Elements();
+
+                                List<Map<String, String>> tableData = new ArrayList<>();
+                                for (Element row : rows) {
+                                        Elements cells = row.select("td");
+                                        Map<String, String> rowData = new HashMap<>();
+                                        for (int i = 0; i < headers.size() && i < cells.size(); i++) {
+                                                System.out.println(headers.get(i).text() + " -> " + cells.get(i).text());
+                                                rowData.put(headers.get(i).text(), cells.get(i).text());
+                                        }
+                                        tableData.add(rowData);
+                                }
+                                versionData.put("table_versions", tableData);
+                        }
+
+                } catch (IOException e) {
+                        log.error("Error scraping version {}: {}", urlFinalModel, e.getMessage());
+                }
+                return versionData;
         }
 
         /**
