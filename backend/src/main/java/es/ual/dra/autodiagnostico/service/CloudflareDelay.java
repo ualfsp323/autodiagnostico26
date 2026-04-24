@@ -1,3 +1,5 @@
+package es.ual.dra.autodiagnostico.service;
+
 import java.util.concurrent.ThreadLocalRandom;
 
 public class CloudflareDelay {
