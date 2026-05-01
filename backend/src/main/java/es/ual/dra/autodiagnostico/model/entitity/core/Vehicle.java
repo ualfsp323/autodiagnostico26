@@ -1,4 +1,4 @@
-package es.ual.dra.autodiagnostico.model.entitity;
+package es.ual.dra.autodiagnostico.model.entitity.core;
 
 import jakarta.persistence.*;
 import lombok.*;

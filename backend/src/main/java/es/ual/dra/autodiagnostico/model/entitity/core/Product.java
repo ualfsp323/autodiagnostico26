@@ -1,4 +1,4 @@
-package es.ual.dra.autodiagnostico.model.entitity;
+package es.ual.dra.autodiagnostico.model.entitity.core;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -39,9 +39,9 @@ public class Product {
     private String description;
 
     // Precio del producto
-    private Double price;
+    private Double price; // Puede ser nulo
 
-    private String image;
+    private String image; // Puede ser nulo
 
     // Vehículo al que pertenece el producto
     @ManyToMany(fetch = FetchType.LAZY)

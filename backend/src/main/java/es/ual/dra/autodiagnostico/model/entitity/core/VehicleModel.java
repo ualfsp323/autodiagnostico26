@@ -1,6 +1,4 @@
-package es.ual.dra.autodiagnostico.model.entitity;
-
-import java.time.LocalDate;
+package es.ual.dra.autodiagnostico.model.entitity.core;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -27,8 +25,4 @@ public class VehicleModel {
     @ManyToOne
     @JoinColumn(name = "idEngine")
     private Engine engine;
-
-    private LocalDate buildDate;
-    private String VIN;
-    private String plate;
 }

@@ -1,4 +1,4 @@
-package es.ual.dra.autodiagnostico.model.entitity;
+package es.ual.dra.autodiagnostico.model.entitity.core;
 
 import java.util.ArrayList;
 import java.util.List;
