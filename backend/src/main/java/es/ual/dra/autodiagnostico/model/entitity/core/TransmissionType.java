@@ -18,7 +18,10 @@ public enum TransmissionType {
           // en vehículos híbridos (principalmente Toyota/Lexus) que gestiona la potencia
           // mediante engranajes planetarios y motores eléctricos en lugar de correas y
           // poleas
-    DSG // Caja de Cambios de Cambio Directo: Es una transmisión automática de doble
-        // embrague desarrollada por el Grupo VAG desde 2003. Usa dos embragues para
-        // preseleccionar marchas, permitiendo cambios ultra rápidos
+    // DSG // Caja de Cambios de Cambio Directo: Es una transmisión automática de
+    // doble
+    // embrague desarrollada por el Grupo VAG desde 2003. Usa dos embragues para
+    // preseleccionar marchas, permitiendo cambios ultra rápidos
+    // Se elimina DSG ya que es la misma tecnologia que DCT solo que es de grupo
+    // VAG.
 }

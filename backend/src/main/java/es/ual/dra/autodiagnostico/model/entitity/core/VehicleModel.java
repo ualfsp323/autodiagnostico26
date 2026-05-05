@@ -26,6 +26,8 @@ public class VehicleModel {
 
     private String modelName;
 
+    private int yearFirstProduction;
+
     private TransmissionType transmission;
 
     @OneToMany(mappedBy = "vehicleModel", cascade = CascadeType.ALL, orphanRemoval = true)
