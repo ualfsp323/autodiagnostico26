@@ -34,6 +34,8 @@ public class DataPopulationService {
     private final EngineRepository engineRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    // Contiene la marca actual siendo procesada SIN el prefijo "ultimatespecs-" ni
+    // otras palabras. Además, está en minúsculas.
     private static String currentBrand;
 
     /**
@@ -54,13 +56,12 @@ public class DataPopulationService {
     }
 
     private void processFile(Path path) {
-        // Extract brand from filename (e.g. ultimatespecs-Seat.json -> Seat)
         String fileName = path.getFileName().toString();
         if (fileName.contains("-")) {
-            currentBrand = fileName.substring(fileName.lastIndexOf("-") + 1, fileName.lastIndexOf("."));
+            currentBrand = fileName.substring(fileName.lastIndexOf("-") + 1, fileName.lastIndexOf(".")).toLowerCase()
+                    .trim();
         } else {
-            // Or use the parent folder name as brand if filename is generic
-            currentBrand = path.getParent().getFileName().toString();
+            currentBrand = path.getParent().getFileName().toString().toLowerCase().trim();
         }
 
         log.info("Processing file: {}", fileName);
@@ -136,10 +137,11 @@ public class DataPopulationService {
                                 VehicleModel vm = VehicleModel.builder()
                                         .modelName(modelName)
                                         .vehicle(vehicle)
+                                        .yearFirstProduction(Integer.valueOf(getSpec(entry, "Año:")))
                                         .engine(engine)
                                         .build();
 
-                                vm.setTransmission(inferTransmissionType(vm, score));
+                                vm.setTransmission(inferTransmissionType(vm, computeATScore(vm)));
                                 return vehicleModelRepository.save(vm);
                             });
                 }
@@ -161,21 +163,16 @@ public class DataPopulationService {
         int year = vehicleModel.getYearFirstProduction();
         if (year < 2005) {
             score -= 3.0;
-
         }
-
         if (year >= 2005 && year < 2012) {
             score -= 1.5;
         }
-
         if (year >= 2012 && year < 2016) {
             score += 0.5;
         }
-
         if (year >= 2016 && year < 2020) {
             score += 1.5;
         }
-
         if (year >= 2020) {
             score += 3.0;
         }
@@ -194,8 +191,24 @@ public class DataPopulationService {
         // Con gasolina/diésel no hay cambio
 
         // Heurística por marca
-        switch(currentBrand) {
-            case 
+        switch (currentBrand) {
+            case "bmw":
+            case "mercedes-benz":
+            case "audi":
+                score += 1.5;
+                break;
+            case "dacia":
+            case "fiat":
+            case "suzuki":
+                score -= 1.5;
+                break;
+            case "ferrari":
+            case "lamborghini":
+                score += 4.0;
+                break;
+            default:
+                score += 0;
+                break;
         }
 
         return score;
@@ -215,14 +228,12 @@ public class DataPopulationService {
      */
 
     private TransmissionType inferTransmissionType(
-            String currentBrand,
             VehicleModel vehicleModel,
             double score // renamed: this is NOT probability, it's the logit input
     ) {
 
         double atProb = 1.0 / (1.0 + Math.exp(-score));
         Engine engine = vehicleModel.getEngine();
-        String processedNormalBrand = currentBrand.toLowerCase().trim();
 
         // Sobreescrituras de máxima confianza
         if (engine != null) {
@@ -238,8 +249,8 @@ public class DataPopulationService {
                 // Lógica coches híbridos
                 if (engineType == EngineType.PHEV || engineType == EngineType.HEV) {
 
-                    if (processedNormalBrand != null) {
-                        switch (processedNormalBrand) {
+                    if (currentBrand != null) {
+                        switch (currentBrand) {
                             case "toyota":
                             case "lexus":
                                 return TransmissionType.eCVT;

@@ -7,47 +7,90 @@
 # ==============================================================================
 
 
-# Reference: https://docs.docker.com/compose/reference/
-# Reference: https://maven.apache.org/surefire/maven-surefire-plugin/examples/single-test.html
+# Stop on any error
+$ErrorActionPreference = "Stop"
 
-$containerName = "autodiagnostico-db"
+# --- Directories ---
+$SCRIPT_DIR = Split-Path -Parent $MyInvocation.MyCommand.Definition
+$ROOT_DIR = Resolve-Path "$SCRIPT_DIR\..\.."
+$BACKEND_DIR = $ROOT_DIR
 
-# Get the root directory
-$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$rootDir = (Get-Item "$scriptDir\..\..").FullName
-$backendDir = "$rootDir\backend"
+# --- Docker network ---
+$DOCKER_NETWORK = "autodiagnostico-net"
 
-Write-Host "Checking if MySQL container '$containerName' is running..."
+# --- MySQL config ---
+$MYSQL_CONTAINER = "autodiagnostico-db"
+$MYSQL_ROOT_PASSWORD = "rootpassword"
+$MYSQL_DB = "autodiagnostico"
+$MYSQL_PORT = 3306
 
-# Check if container is running
-$isRunning = docker inspect -f '{{.State.Running}}' $containerName 2>$null
+# --- Maven config ---
+$MAVEN_CONTAINER = "maven-runner"
 
-if ($isRunning -ne "true") {
-    Write-Host "MySQL is not running. Starting it via Docker Compose..."
-    Set-Location $rootDir
-    docker compose up -d mysql
-    
-    # Wait for the container to start
+# --- Function to check if a port is open ---
+function Test-PortOpen {
+    param(
+        [string]$Host,
+        [int]$Port
+    )
+    try {
+        $tcp = New-Object System.Net.Sockets.TcpClient
+        $tcp.Connect($Host, $Port)
+        $tcp.Close()
+        return $true
+    } catch {
+        return $false
+    }
+}
+
+# --- Docker network setup ---
+Write-Host "Ensuring Docker network '$DOCKER_NETWORK' exists..."
+if (-not (docker network inspect $DOCKER_NETWORK -ErrorAction SilentlyContinue)) {
+    docker network create $DOCKER_NETWORK | Out-Null
+    Write-Host "Docker network '$DOCKER_NETWORK' created."
+} else {
+    Write-Host "Docker network '$DOCKER_NETWORK' already exists."
+}
+
+# --- MySQL Section ---
+Write-Host "Checking MySQL container '$MYSQL_CONTAINER'..."
+$mysqlRunning = docker ps --filter "name=$MYSQL_CONTAINER" --filter "status=running" --format "{{.Names}}" | Select-String $MYSQL_CONTAINER
+
+if ($mysqlRunning) {
+    Write-Host "MySQL container is already running."
+} else {
+    Write-Host "Starting MySQL container '$MYSQL_CONTAINER'..."
+
+    # Remove old container if it exists
+    docker rm -f $MYSQL_CONTAINER -ErrorAction SilentlyContinue | Out-Null
+
+    # Run MySQL container on the network
+    docker run --name $MYSQL_CONTAINER `
+        --network $DOCKER_NETWORK `
+        -e "MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD" `
+        -e "MYSQL_DATABASE=$MYSQL_DB" `
+        -p "$MYSQL_PORT`:3306" `
+        -d mysql:8 | Out-Null
+
     Write-Host "Waiting for MySQL to initialize..."
-    Start-Sleep -Seconds 10
-} else {
-    Write-Host "MySQL is already running."
+    Start-Sleep -Seconds 15
+
+    Write-Host "MySQL container '$MYSQL_CONTAINER' is running on network '$DOCKER_NETWORK'."
 }
 
-# Fetch the host port mapped to 3306
-# Reference: https://docs.docker.com/engine/reference/commandline/port/
-$portInfo = docker port $containerName 3306
-if ($portInfo -match ':(?<port>\d+)') {
-    $port = $Matches.port
-} else {
-    Write-Host "Error: Could not fetch MySQL port. Is the container running?"
-    exit 1
-}
+# --- Maven Section ---
+Write-Host "Running Maven tests in Docker..."
 
-Write-Host "MySQL is accessible on localhost:$port"
+# Remove old Maven container if exists (temporary)
+docker rm -f $MAVEN_CONTAINER -ErrorAction SilentlyContinue | Out-Null
 
-# Run the integration test using Maven
-# We override the datasource URL to ensure it matches the fetched port
-Write-Host "Running DataPopulationServiceIntegrationTest..."
-Set-Location $backendDir
-mvn clean test -Dtest=DataPopulationServiceIntegrationTest "-Dspring.datasource.url=jdbc:mysql://localhost:$port/autodiagnostico?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true"
+# Run Maven container on the network
+docker run --name $MAVEN_CONTAINER --rm `
+    --network $DOCKER_NETWORK `
+    -v "$BACKEND_DIR`:/usr/src/mymaven" `
+    -w /usr/src/mymaven `
+    maven:3.9.15-eclipse-temurin-21 `
+    mvn clean test -Dtest=DataPopulationServiceIntegrationTest `
+    -Dspring.datasource.url="jdbc:mysql://$MYSQL_CONTAINER:$MYSQL_PORT/$MYSQL_DB?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true" `
+    -Dspring.datasource.username=root `
+    -Dspring.datasource.password="$MYSQL_ROOT_PASSWORD"
