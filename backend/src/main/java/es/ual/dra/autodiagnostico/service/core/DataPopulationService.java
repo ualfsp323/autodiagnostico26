@@ -134,10 +134,11 @@ public class DataPopulationService {
 
                     VehicleModel vehicleModel = vehicleModelRepository.findByModelNameAndVehicle(modelName, vehicle)
                             .orElseGet(() -> {
+
                                 VehicleModel vm = VehicleModel.builder()
                                         .modelName(modelName)
                                         .vehicle(vehicle)
-                                        .yearFirstProduction(Integer.valueOf(getSpec(entry, "Año:")))
+                                        .yearFirstProduction(Integer.valueOf(entry.get("Año").asText()))
                                         .engine(engine)
                                         .build();
 
