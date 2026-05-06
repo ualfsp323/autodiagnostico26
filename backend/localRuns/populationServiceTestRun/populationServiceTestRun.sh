@@ -1,50 +1,55 @@
 #!/bin/bash
+set -e
 
-# This script checks if the MySQL container is running, starts it if not,
-# fetches its port, and runs the DataPopulationServiceIntegrationTest.
-
-# Reference: https://docs.docker.com/compose/reference/
-# Reference: https://maven.apache.org/surefire/maven-surefire-plugin/examples/single-test.html
-
-# Get the directory where the script is located
+# Directories
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../../" && pwd)"
 BACKEND_DIR="$ROOT_DIR"
 
-CONTAINER_NAME="autodiagnostico-db"
+# MySQL config
+MYSQL_CONTAINER="autodiagnostico-db"
+MYSQL_ROOT_PASSWORD="rootpassword"
+MYSQL_DB="autodiagnostico"
+MYSQL_PORT=3306
 
-echo "Checking if MySQL container '$CONTAINER_NAME' is running..."
+# Maven config
+MAVEN_CONTAINER="maven-runner"
 
-# Check if the container is running
-IS_RUNNING=$(sudo docker inspect -f '{{.State.Running}}' "$CONTAINER_NAME" 2>/dev/null)
+# Function to check if port is open
+function port_open() {
+    nc -zv "$1" "$2" >/dev/null 2>&1
+}
 
-if [ "$IS_RUNNING" != "true" ]; then
-    echo "MySQL is not running. Starting it via Docker Compose..."
-    cd "$ROOT_DIR"
-    sudo docker compose up -d mysql
-    
-    # Wait for the container to start
-    echo "Waiting for MySQL to initialize..."
-    sleep 10
+# --- MySQL Section ---
+echo "Checking MySQL on localhost:$MYSQL_PORT..."
+if port_open "localhost" "$MYSQL_PORT"; then
+    echo "MySQL is already accessible."
 else
-    echo "MySQL is already running."
+    echo "MySQL not accessible, starting Docker container..."
+    
+    # Remove any old container just in case
+    sudo docker rm -f "$MYSQL_CONTAINER" >/dev/null 2>&1 || true
+
+    # Run MySQL in a temporary Docker container
+    sudo docker run --name "$MYSQL_CONTAINER" \
+        -e MYSQL_ROOT_PASSWORD="$MYSQL_ROOT_PASSWORD" \
+        -e MYSQL_DATABASE="$MYSQL_DB" \
+        -p "$MYSQL_PORT":3306 \
+        -d mysql:8
+
+    echo "Waiting for MySQL to initialize..."
+    sleep 15  # Give MySQL time to start
+
+    echo "MySQL container '$MYSQL_CONTAINER' is running."
 fi
 
-# Fetch the host port mapped to 3306
-# Reference: https://docs.docker.com/engine/reference/commandline/port/
-PORT_INFO=$(sudo docker port "$CONTAINER_NAME" 3306)
-PORT=$(echo "$PORT_INFO" | grep -oE '[0-9]+$' | head -1)
+# --- Maven Section ---
+echo "Checking if Maven is running in Docker..."
+# We run Maven in a temporary container if not already running
+# We'll mount the backend directory and run the test
+sudo docker rm -f "$MAVEN_CONTAINER" >/dev/null 2>&1 || true
 
-if [ -z "$PORT" ]; then
-    echo "Error: Could not fetch MySQL port. Is the container running?"
-    exit 1
-fi
-
-echo "MySQL is accessible on localhost:$PORT"
-
-# Run the integration test using Maven
-# We override the datasource URL to ensure it matches the fetched port
-echo "Running DataPopulationServiceIntegrationTest..."
-cd "$BACKEND_DIR"
-mvn clean test -Dtest=DataPopulationServiceIntegrationTest \
-    -Dspring.datasource.url="jdbc:mysql://localhost:$PORT/autodiagnostico?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true"
+echo "Starting Maven Docker container for one-time test..."
+sudo docker run --name "$MAVEN_CONTAINER" --rm -v "$BACKEND_DIR":/usr/src/mymaven -w /usr/src/mymaven maven:3.9.15-eclipse-temurin-21 \
+    mvn clean test -Dtest=DataPopulationServiceIntegrationTest \
+    -Dspring.datasource.url="jdbc:mysql://host.docker.internal:$MYSQL_PORT/$MYSQL_DB?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true"
