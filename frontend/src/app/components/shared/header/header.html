@@ -108,7 +108,7 @@
           Taller
         </a>
         @if (authStateService.canAccessSeguimiento()) {
-          <a routerLink="/seguimiento" routerLinkActive="nav-item--active" class="nav-item">
+          <a routerLink="/usuario/seguimiento" routerLinkActive="nav-item--active" class="nav-item">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
             Seguimiento
           </a>
@@ -139,7 +139,7 @@
         <a routerLink="/taller" class="mobile-nav-link" (click)="toggleMobileMenu()">Taller</a>
         <a routerLink="/repuestos" class="mobile-nav-link" (click)="toggleMobileMenu()">Repuestos</a>
         @if (authStateService.canAccessSeguimiento()) {
-          <a routerLink="/seguimiento" class="mobile-nav-link" (click)="toggleMobileMenu()">Seguimiento</a>
+          <a routerLink="/usuario/seguimiento" class="mobile-nav-link" (click)="toggleMobileMenu()">Seguimiento</a>
         }
         <a routerLink="/presupuesto" class="mobile-nav-link" (click)="toggleMobileMenu()">Presupuesto</a>
         <a routerLink="/historial" class="mobile-nav-link" (click)="toggleMobileMenu()">Historial</a>
