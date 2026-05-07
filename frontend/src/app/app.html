@@ -1,7 +1,11 @@
-<app-header />
+@if (!isAuthPage()) {
+  <app-header />
+}
 
-<main class="app-shell">
-<router-outlet />
+<main [class.app-shell]="!isAuthPage()">
+  <router-outlet />
 </main>
 
-<app-footer />
+@if (!isAuthPage()) {
+  <app-footer />
+}
