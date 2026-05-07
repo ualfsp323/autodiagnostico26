@@ -1,0 +1,17 @@
+<section class="tracking-shell">
+  <header>
+    <p class="eyebrow">Seguimiento</p>
+    <h1>Cliente en taller</h1>
+  </header>
+
+  <label>
+    Actualización para el cliente
+    <textarea [(ngModel)]="message" rows="4" placeholder="Escribe una actualización para el usuario"></textarea>
+  </label>
+
+  <button type="button" (click)="addMessage()">Enviar actualización</button>
+
+  <div class="chat-log">
+    <p *ngFor="let update of updates">{{ update }}</p>
+  </div>
+</section>
