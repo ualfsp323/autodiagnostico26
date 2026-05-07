@@ -1,0 +1,127 @@
+.mechanic-shell {
+  min-height: 100vh;
+  padding: 24px;
+  background: linear-gradient(180deg, #0f172a 0%, #111827 100%);
+  color: #e5e7eb;
+}
+
+.mechanic-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+  border-radius: 20px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #93c5fd;
+}
+
+.mechanic-header h1 {
+  margin: 0;
+  font-size: 28px;
+}
+
+.workshop {
+  margin: 4px 0 0;
+  color: #cbd5e1;
+}
+
+.clients-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 18px;
+  border-radius: 999px;
+  background: #38bdf8;
+  color: #082f49;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.clients-panel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.client-card {
+  cursor: pointer;
+  border-radius: 20px;
+  padding: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(15, 23, 42, 0.88);
+  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.35);
+}
+
+.client-topline {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: start;
+}
+
+.client-topline h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.status-pill {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.client-details p {
+  margin: 10px 0 0;
+  color: #cbd5e1;
+}
+
+.client-action {
+  margin: 16px 0 0;
+  color: #7dd3fc;
+  font-weight: 700;
+}
+
+.verde {
+  border-left: 4px solid #22c55e;
+}
+
+.verde .status-pill {
+  color: #86efac;
+}
+
+.amarillo {
+  border-left: 4px solid #eab308;
+}
+
+.amarillo .status-pill {
+  color: #fde68a;
+}
+
+.naranja {
+  border-left: 4px solid #f97316;
+}
+
+.naranja .status-pill {
+  color: #fdba74;
+}
+
+.rojo {
+  border-left: 4px solid #ef4444;
+}
+
+.rojo .status-pill {
+  color: #fca5a5;
+}

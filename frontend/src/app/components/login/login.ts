@@ -158,6 +158,12 @@ export class LoginComponent implements OnInit {
     });
 
     this.isSubmitting = false;
+    // If the authenticated user is a workshop (mechanic), redirect to the mechanic dashboard
+    if (user.role === 'TALLER') {
+      void this.router.navigate(['/mecanico']);
+      return;
+    }
+
     const redirectToSeguimiento = this.mode === 'register' || user.role === 'ADMIN';
     void this.router.navigate([redirectToSeguimiento ? '/seguimiento' : '/home']);
   }
