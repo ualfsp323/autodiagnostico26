@@ -1,46 +1,67 @@
-<section class="selecciona-problema">
+<section class="sp-card">
 
-  <!-- Separador con texto -->
-  <div class="separador">
-    <hr class="separador-linea" />
-    <span class="separador-texto">Selecciona el problema</span>
-    <hr class="separador-linea" />
+  <!-- Separador -->
+  <div class="sp-separator">
+    <span class="sp-separator-line"></span>
+    <span class="sp-separator-text">Selecciona el problema</span>
+    <span class="sp-separator-line"></span>
   </div>
 
-  <!-- Dropdown — ¿Qué problema tiene tu vehículo? -->
-  <div class="dropdown-wrapper">
+  <!-- Dropdown -->
+  <div class="sp-dropdown-wrapper">
+
     <button
-      id="btn-problema"
       type="button"
-      class="dropdown-btn"
-      [class.abierto]="dropdownAbierto"
+      class="sp-btn"
+      [class.sp-btn-open]="dropdownAbierto"
       (click)="toggleDropdown()"
       [attr.aria-expanded]="dropdownAbierto"
       aria-haspopup="listbox"
     >
-      <span class="dropdown-texto">
+      <span class="sp-btn-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+        </svg>
+      </span>
+      <span class="sp-btn-text">
         {{ problemaSeleccionado ?? '¿Qué problema tiene tu vehículo?' }}
       </span>
-      <span class="dropdown-chevron" [class.rotado]="dropdownAbierto" aria-hidden="true">▾</span>
+      <svg class="sp-chevron" [class.sp-chevron-open]="dropdownAbierto"
+           viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fill-rule="evenodd" clip-rule="evenodd"
+              d="M5.293 7.293a1 1 0 0 1 1.414 0L10 10.586l3.293-3.293a1 1 0 1 1 1.414 1.414l-4 4a1 1 0 0 1-1.414 0l-4-4a1 1 0 0 1 0-1.414Z"/>
+      </svg>
     </button>
 
-    <ul
-      class="dropdown-lista"
-      role="listbox"
-      [class.visible]="dropdownAbierto"
-      aria-label="Lista de problemas del vehículo"
-    >
-      @for (problema of problemas; track problema) {
-        <li
-          class="dropdown-item"
-          role="option"
-          [class.seleccionado]="problema === problemaSeleccionado"
-          (click)="seleccionarProblema(problema)"
-        >
-          {{ problema }}
-        </li>
+    <div class="sp-panel" [class.sp-panel-open]="dropdownAbierto" role="listbox"
+         aria-label="Lista de problemas del vehículo">
+
+      @for (cat of categorias; track cat) {
+        <div class="sp-group">
+          <span class="sp-group-label">{{ cat }}</span>
+          @for (item of problemasPorCategoria(cat); track item.label) {
+            <button
+              type="button"
+              class="sp-item"
+              role="option"
+              [class.sp-item-selected]="item.label === problemaSeleccionado"
+              (click)="seleccionarProblema(item.label)"
+            >
+              @if (item.label === problemaSeleccionado) {
+                <svg class="sp-item-check" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fill-rule="evenodd" clip-rule="evenodd"
+                        d="M16.707 5.293a1 1 0 0 1 0 1.414l-8 8a1 1 0 0 1-1.414 0l-4-4a1 1 0 0 1 1.414-1.414L8 12.586l7.293-7.293a1 1 0 0 1 1.414 0Z"/>
+                </svg>
+              } @else {
+                <span class="sp-item-check"></span>
+              }
+              {{ item.label }}
+            </button>
+          }
+        </div>
       }
-    </ul>
+
+    </div>
   </div>
 
 </section>
