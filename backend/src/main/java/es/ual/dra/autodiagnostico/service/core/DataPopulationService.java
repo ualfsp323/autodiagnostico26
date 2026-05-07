@@ -206,10 +206,12 @@ public class DataPopulationService {
                             EngineType engineType = mapStringToEngineType(fuelType, eng.getEngineType());
 
                             if (engineType != null) {
+                                List<Product> productsToAdd = new ArrayList<>();
+                                productsToAdd.add(product);
                                 System.out.println(
                                         "Asociando a " + vehicleModel.getModelName() + "->" + product.getName());
                                 // Asociar VehicleModel a Producto
-                                vehicleModelRepository.updateProducts(vehicleModel, List.of(product));
+                                vehicleModelRepository.updateProducts(vehicleModel, productsToAdd);
                             }
 
                         }
