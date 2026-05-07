@@ -28,6 +28,7 @@ export class HeaderComponent {
   onLogout(): void {
     this.authStateService.clearSession();
     this.menuOpen = false;
+    void this.router.navigate(['/login']);
   }
 
   onSearch(): void {

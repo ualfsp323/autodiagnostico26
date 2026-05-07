@@ -38,8 +38,9 @@ public class DataPopulationServiceIntegrationTest {
     public void testPopulateFromJson() throws IOException {
         // Path to the sample JSON created in T005
         String sampleJsonPath = "src/test/resources/sample-seat.json";
+        String carSampleJsonPath = "src/test/resources/carparts-vag.json";
         // When
-        dataPopulationService.populateFromFile(sampleJsonPath, "Seat");
+        dataPopulationService.populateFromFile(sampleJsonPath, carSampleJsonPath);
 
         // Then
         List<Vehicle> vehicles = vehicleRepository.findAll();
@@ -48,13 +49,13 @@ public class DataPopulationServiceIntegrationTest {
             System.out.println("Vehicle: " + v);
         });
         assertFalse(vehicles.isEmpty(), "Should have populated vehicles");
-        
+
         Vehicle mii = vehicles.stream()
                 .filter(v -> v.getName().equals("Seat Mii Ficha Tecnica"))
                 .findFirst()
                 .orElseThrow();
-        
-        assertEquals("Seat", mii.getBrand());
+
+        assertEquals("seat", mii.getBrand());
         assertEquals("242.1 cm / 95.31 pulgadas", mii.getWheelbase());
 
         // Cycle/Check for Ibiza
