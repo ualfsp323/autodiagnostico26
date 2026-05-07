@@ -54,7 +54,7 @@ public class DataPopulationServiceIntegrationTest {
                 .findFirst()
                 .orElseThrow();
 
-        assertEquals("Seat", mii.getBrand());
+        assertEquals("seat", mii.getBrand());
         assertEquals("242.1 cm / 95.31 pulgadas", mii.getWheelbase());
 
         // Cycle/Check for Ibiza

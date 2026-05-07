@@ -49,27 +49,30 @@ public class DataPopulationService {
                     .filter(Files::isRegularFile)
                     .filter(p -> p.toString().endsWith(".json"))
                     .filter(p -> !p.getFileName().toString().startsWith("carparts")) // Skip carparts files
-                    .forEach(this::processFile);
+                    .forEach(path -> {
+                        this.processFilePath(path);
+                        this.populateFromFile(path.toString());
+                    });
         } catch (IOException e) {
             log.error("Error scanning directory {}: {}", rootPath, e.getMessage());
         }
     }
 
-    private void processFile(Path path) {
-        String fileName = path.getFileName().toString();
+    private void processFilePath(Path filePath) {
+        String fileName = filePath.getFileName().toString();
         if (fileName.contains("-")) {
             currentBrand = fileName.substring(fileName.lastIndexOf("-") + 1, fileName.lastIndexOf(".")).toLowerCase()
                     .trim();
         } else {
-            currentBrand = path.getParent().getFileName().toString().toLowerCase().trim();
+            currentBrand = fileName;
         }
 
         log.info("Processing file: {}", fileName);
-        populateFromFile(path.toString());
     }
 
     public void populateFromFile(String filePath) {
         try {
+            processFilePath(Paths.get(filePath));
             JsonNode root = objectMapper.readTree(new File(filePath));
             JsonNode models = root.get("models");
             if (models != null && models.isArray()) {
@@ -190,6 +193,8 @@ public class DataPopulationService {
         }
 
         // Con gasolina/diésel no hay cambio
+
+        System.out.println("Before switch, current brand is: " + currentBrand);
 
         // Heurística por marca
         switch (currentBrand) {
