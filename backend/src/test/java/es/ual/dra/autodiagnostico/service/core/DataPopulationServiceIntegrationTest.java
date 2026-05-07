@@ -38,8 +38,9 @@ public class DataPopulationServiceIntegrationTest {
     public void testPopulateFromJson() throws IOException {
         // Path to the sample JSON created in T005
         String sampleJsonPath = "src/test/resources/sample-seat.json";
+        String carSampleJsonPath = "src/test/resources/carparts-vag.json";
         // When
-        dataPopulationService.populateFromFile(sampleJsonPath);
+        dataPopulationService.populateFromFile(sampleJsonPath, carSampleJsonPath);
 
         // Then
         List<Vehicle> vehicles = vehicleRepository.findAll();
