@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import es.ual.dra.autodiagnostico.model.entitity.core.Engine;
 import es.ual.dra.autodiagnostico.model.entitity.core.EngineType;
+import es.ual.dra.autodiagnostico.model.entitity.core.Product;
 import es.ual.dra.autodiagnostico.model.entitity.core.TransmissionType;
 import es.ual.dra.autodiagnostico.model.entitity.core.Vehicle;
 import es.ual.dra.autodiagnostico.model.entitity.core.VehicleModel;
@@ -13,8 +14,11 @@ import es.ual.dra.autodiagnostico.repository.VehicleModelRepository;
 import es.ual.dra.autodiagnostico.repository.VehicleRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.apache.commons.text.similarity.LevenshteinDistance;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.apache.commons.text.similarity.LevenshteinDistance;
 
 import java.io.File;
 import java.io.IOException;
@@ -43,6 +47,7 @@ public class DataPopulationService {
     // otras palabras. Además, está en minúsculas.
     private static String currentBrand;
     private static String currentCarGroup;
+    private static String generalPartsJSONPath = "src/main/resources/general-car-parts.json";
 
     // Comentado ya que ahora mismo previene la ejecución y no es un método usado
     // ahora mismo en el test
@@ -108,6 +113,74 @@ public class DataPopulationService {
         }
     }
 
+    private Product findPartByName(String partName) {
+        if (partName == null || partName.isEmpty())
+            return null;
+
+        try {
+            JsonNode root = objectMapper.readTree(new File(generalPartsJSONPath));
+            if (!root.isArray())
+                return null;
+
+            String searchName = partName.toLowerCase().trim();
+            LevenshteinDistance distance = LevenshteinDistance.getDefaultInstance();
+
+            for (JsonNode node : root) {
+
+                String entryName = node.get("name").asText().toLowerCase().trim();
+                boolean exactMatch = entryName.equals(searchName);
+                boolean containsMatch = !exactMatch ? (entryName.contains(searchName) ||
+                        searchName.contains(entryName)) : false;
+                boolean hasDecentError = false;
+                int res = distance.apply(entryName, searchName);
+                int errorLimit = Math.max(3, entryName.length() / 4); // 3 errores máximo si la longitud es
+                // 12 o menos, o 1 error por cada 4 caracteres.
+
+                if (!exactMatch && !containsMatch) {
+                    hasDecentError = res <= errorLimit;
+                }
+
+                boolean found = exactMatch || containsMatch || hasDecentError;
+
+                String priceRangeStr = node.get("priceRange").asText().replace("€", "").replace(" ", "");
+                String[] priceRangeArray = priceRangeStr.split("-");
+                double lowRangePrice = Double.parseDouble(priceRangeArray[0].trim());
+                double highRangePrice = Double.parseDouble(priceRangeArray[1].trim());
+
+                if (found) {
+                    return Product.builder()
+                            .name(node.get("name").asText())
+                            .description(node.get("description").asText())
+                            .lowRangePrice(lowRangePrice)
+                            .highRangePrice(highRangePrice)
+                            .image(node.get("image").asText())
+                            .build();
+                } else {
+                    return null;
+                }
+            }
+
+        } catch (IOException e) {
+            log.error("Error reading file {}: {}", generalPartsJSONPath, e.getMessage());
+        }
+        return null;
+    }
+
+    private EngineType mapStringToEngineType(String fuelType, EngineType engineType) {
+        if (fuelType == null)
+            return null;
+
+        return switch (fuelType.toUpperCase()) {
+            case "DIESEL" -> (engineType == EngineType.DIESEL) ? EngineType.DIESEL : null;
+            case "GASOLINA" -> (engineType == EngineType.PETROL
+                    || engineType == EngineType.PHEV) ? EngineType.PETROL : null;
+            case "ELECTRIC" -> (engineType == EngineType.BEV) ? EngineType.BEV : null;
+            case "PHEV" -> (engineType == EngineType.PHEV) ? EngineType.PHEV : null;
+            case "HYBRID", "HEV" -> (engineType == EngineType.HEV) ? EngineType.HEV : null;
+            default -> null;
+        };
+    }
+
     private void processCarPartsForVehicleModel(Path carPartsGroupPath, VehicleModel vehicleModel) {
         try {
             JsonNode carPartRoot = objectMapper.readTree(new File(carPartsGroupPath.toAbsolutePath().toString()));
@@ -115,13 +188,33 @@ public class DataPopulationService {
                 for (JsonNode node : carPartRoot) {
                     String platformGen = node.get("plataforma_generacion").asText();
                     String fuelType = node.get("tipo_combustible").asText();
+
                     JsonNode parts = node.get("piezas");
                     if (parts.isArray()) {
                         for (JsonNode part : parts) {
-                            // TODO: Guardar pieza
-                            // productRepository.findB
+                            String partName = part.asText().trim().toLowerCase();
+                            Product product = findPartByName(partName);
+
+                            if (product == null) {
+                                product = Product.builder()
+                                        .name(partName)
+                                        .build();
+                                productRepository.save(product);
+                            }
+
+                            Engine eng = vehicleModel.getEngine();
+                            EngineType engineType = mapStringToEngineType(fuelType, eng.getEngineType());
+
+                            if (engineType != null) {
+                                System.out.println(
+                                        "Asociando a " + vehicleModel.getModelName() + "->" + product.getName());
+                                // Asociar VehicleModel a Producto
+                                vehicleModelRepository.updateProducts(vehicleModel, List.of(product));
+                            }
+
                         }
                     }
+
                 }
             } else {
                 System.out.println("carPartRoot is not array");
@@ -139,7 +232,8 @@ public class DataPopulationService {
             for (JsonNode versionNode : versions) {
                 Vehicle vehicle = mapToVehicle(versionNode);
                 Vehicle finalVehicle = vehicleRepository.findByNameAndBrand(vehicle.getName(), vehicle.getBrand())
-                        .orElseGet(() -> vehicleRepository.save(vehicle));
+                        .orElseGet(
+                                () -> vehicleRepository.save(vehicle));
 
                 vehicleModels.put(finalVehicle, processTableVersions(versionNode.get("table_versions"), finalVehicle));
             }

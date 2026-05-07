@@ -41,7 +41,9 @@ public class Product {
     private String description;
 
     // Precio del producto
-    private Double price; // Puede ser nulo
+    private Double lowRangePrice; // Puede ser nulo
+
+    private Double highRangePrice; // Puede ser nulo
 
     private String image; // Puede ser nulo
 
