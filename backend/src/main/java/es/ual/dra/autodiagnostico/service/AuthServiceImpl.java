@@ -6,7 +6,7 @@ import java.time.LocalDateTime;
 import java.util.Locale;
 
 import org.springframework.http.HttpStatus;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -23,7 +23,7 @@ import lombok.RequiredArgsConstructor;
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
-    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public AuthUserResponseDTO register(AuthRegisterRequestDTO request) {

@@ -10,18 +10,32 @@
   </header>
 
   <main class="clients-panel">
-    <article class="client-card" *ngFor="let client of clients" [ngClass]="getStatus(client)" [routerLink]="['/mecanico','seguimiento']" [queryParams]="{ clientId: client.id }">
-      <div class="client-topline">
-        <h2>{{ client.userName }}</h2>
-        <span class="status-pill">{{ getStatusLabel(getStatus(client)) }}</span>
-      </div>
+    @if (loading) {
+      <p>Cargando clientes...</p>
+    }
 
-      <div class="client-details">
-        <p><strong>Coche:</strong> {{ client.car }}</p>
-        <p><strong>Problema:</strong> {{ client.problem }}</p>
-      </div>
+    @if (error) {
+      <p class="error">{{ error }}</p>
+    }
 
-      <p class="client-action">Ver seguimiento</p>
-    </article>
+    @if (!loading && !error && clients.length > 0) {
+      <article class="client-card" *ngFor="let client of clients" [ngClass]="'status-' + client.status" [routerLink]="['/mecanico','seguimiento']" [queryParams]="{ clientId: client.clientId }">
+        <div class="client-topline">
+          <h2>{{ client.clientName }}</h2>
+          <span class="status-pill">{{ getStatusLabel(client.status) }}</span>
+        </div>
+
+        <div class="client-details">
+          <p><strong>Coche:</strong> {{ client.carInfo }}</p>
+          <p><strong>Problema:</strong> {{ client.problemDescription }}</p>
+        </div>
+
+        <p class="client-action">Ver seguimiento</p>
+      </article>
+    }
+
+    @if (!loading && !error && clients.length === 0) {
+      <p>No hay clientes asignados</p>
+    }
   </main>
 </section>

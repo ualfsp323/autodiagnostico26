@@ -20,6 +20,7 @@ export const routes: Routes = [
 	{ path: 'diagnostico', component: DiagnosticoComponent },
 	{ path: 'taller', component: TallerComponent },
 	{ path: 'repuestos', component: RepuestosComponent },
+	{ path: 'mecanico', loadComponent: () => import('./mecanico/mecanico.component').then((m) => m.MecanicoComponent) },
 	{
 		path: 'usuario/seguimiento',
 		component: SeguimientoComponent,

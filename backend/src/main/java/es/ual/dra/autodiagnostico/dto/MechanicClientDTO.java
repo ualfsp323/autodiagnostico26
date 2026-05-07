@@ -1,0 +1,31 @@
+package es.ual.dra.autodiagnostico.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class MechanicClientDTO {
+
+    private Long clientId;
+
+    private String clientName;
+
+    private String clientEmail;
+
+    private String clientAvatar;
+
+    private String carInfo; // Example: "Toyota Corolla 2018"
+
+    private String problemDescription;
+
+    private String status; // verde, amarillo, naranja, rojo
+
+    private Long tallerAssignmentId;
+}

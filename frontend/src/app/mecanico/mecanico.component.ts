@@ -1,18 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { inject } from '@angular/core';
 import { SeguimientoService } from '../services/seguimiento.service';
-
-type ClientStatus = 'verde' | 'amarillo' | 'naranja' | 'rojo';
-
-interface MechanicClient {
-  id: number;
-  userName: string;
-  car: string;
-  problem: string;
-  status: ClientStatus;
-}
+import { MechanicService, MechanicClient } from '../services/mechanic.service';
+import { AuthStateService } from '../services/auth-state.service';
 
 @Component({
   selector: 'app-mecanico',
@@ -21,28 +13,41 @@ interface MechanicClient {
   templateUrl: './mecanico.component.html',
   styleUrl: './mecanico.component.css'
 })
-export class MecanicoComponent {
-  mechanicName = 'Mecánico 1';
-  workshopName = 'Taller Aurora';
+export class MecanicoComponent implements OnInit {
+  mechanicName = 'Mecánico';
+  workshopName = 'Taller';
   private seguimiento = inject(SeguimientoService);
+  private mechanicService = inject(MechanicService);
+  private authState = inject(AuthStateService);
 
-  clients: MechanicClient[] = [
-    { id: 101, userName: 'Ana López', car: 'Toyota Corolla', problem: 'Cambio de aceite', status: this.seguimiento.getStatus(101) },
-    { id: 102, userName: 'Luis Pérez', car: 'Honda Civic', problem: 'Frenos desgastados', status: this.seguimiento.getStatus(102) },
-    { id: 103, userName: 'Ana López', car: 'Hyundai i30', problem: 'Revisión de batería', status: this.seguimiento.getStatus(103) },
-    { id: 104, userName: 'María Gómez', car: 'Ford Focus', problem: 'Ruido en suspensión', status: this.seguimiento.getStatus(104) }
-  ];
+  clients: MechanicClient[] = [];
+  loading = true;
+  error: string | null = null;
 
-  getStatusLabel(status: ClientStatus): string {
+  ngOnInit(): void {
+    const mechanicId = this.authState.userId();
+    if (mechanicId) {
+      this.mechanicName = this.authState.userName();
+      this.mechanicService.getClientsForMechanic(mechanicId).subscribe({
+        next: (clients) => {
+          this.clients = clients;
+          this.loading = false;
+        },
+        error: (err) => {
+          this.error = 'Error loading clients';
+          this.loading = false;
+          console.error('Error loading clients:', err);
+        }
+      });
+    }
+  }
+
+  getStatusLabel(status: string): string {
     return {
       verde: 'En buen estado',
       amarillo: 'Pendiente',
       naranja: 'En revisión',
       rojo: 'Urgente'
-    }[status];
-  }
-
-  getStatus(client: MechanicClient): ClientStatus {
-    return this.seguimiento.getStatus(client.id, client.status);
+    }[status] || status;
   }
 }

@@ -12,6 +12,11 @@ import es.ual.dra.autodiagnostico.model.entitity.chat.TallerAssignment;
 public interface TallerAssignmentRepository extends JpaRepository<TallerAssignment, Long> {
 
     /**
+     * Obtener todas las asignaciones activas
+     */
+    List<TallerAssignment> findByActiveTrue();
+
+    /**
      * Obtener todas las asignaciones activas de un taller
      */
     List<TallerAssignment> findByTallerIdAndActiveTrue(Long tallerId);
