@@ -21,7 +21,7 @@ export const routes: Routes = [
 	{ path: 'taller', component: TallerComponent },
 	{ path: 'repuestos', component: RepuestosComponent },
 	{
-		path: 'seguimiento',
+		path: 'usuario/seguimiento',
 		component: SeguimientoComponent,
 		canActivate: [seguimientoGuard],
 		children: [
@@ -30,6 +30,10 @@ export const routes: Routes = [
 		]
 	},
 	{ path: 'presupuesto', component: PresupuestoComponent },
+	{ path: 'mecanico/seguimiento', loadComponent: () => import('./mecanico/seguimiento/seguimiento.component').then((m) => m.SeguimientoComponent), canActivate: [seguimientoGuard], children: [
+		{ path: '', pathMatch: 'full', redirectTo: 'chat' },
+		{ path: 'chat', loadComponent: () => import('./components/seguimiento/chat/chat').then((m) => m.SeguimientoChatComponent) }
+	] },
 	{ path: 'historial', component: HistorialComponent },
 	{ path: 'contacto', component: ContactoComponent },
 	{ path: 'perfil', component: PerfilComponent },

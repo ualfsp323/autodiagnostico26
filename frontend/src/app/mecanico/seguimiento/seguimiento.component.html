@@ -1,17 +1,33 @@
-<section class="tracking-shell">
-  <header>
-    <p class="eyebrow">Seguimiento</p>
-    <h1>Cliente en taller</h1>
-  </header>
+<section class="tracking-shell split">
+  <div class="left">
+    <header>
+      <p class="eyebrow">Seguimiento</p>
+      <h1>Cliente en taller</h1>
+    </header>
 
-  <label>
-    Actualización para el cliente
-    <textarea [(ngModel)]="message" rows="4" placeholder="Escribe una actualización para el usuario"></textarea>
-  </label>
+    <div class="status-row">
+      <label>Status:</label>
+      <div class="status-controls">
+        <button type="button" (click)="setStatus('verde')" [class.active]="status==='verde'">Verde</button>
+        <button type="button" (click)="setStatus('amarillo')" [class.active]="status==='amarillo'">Amarillo</button>
+        <button type="button" (click)="setStatus('naranja')" [class.active]="status==='naranja'">Naranja</button>
+        <button type="button" (click)="setStatus('rojo')" [class.active]="status==='rojo'">Rojo</button>
+      </div>
+    </div>
 
-  <button type="button" (click)="addMessage()">Enviar actualización</button>
+    <label>
+      Actualización para el cliente
+      <textarea [(ngModel)]="message" rows="4" placeholder="Escribe una actualización para el usuario"></textarea>
+    </label>
 
-  <div class="chat-log">
-    <p *ngFor="let update of updates">{{ update }}</p>
+    <button type="button" (click)="addMessage()">Enviar actualización</button>
+
+    <div class="chat-log">
+      <p *ngFor="let update of updates">{{ update }}</p>
+    </div>
   </div>
+
+  <aside class="right">
+    <app-seguimiento-chat></app-seguimiento-chat>
+  </aside>
 </section>

@@ -10,10 +10,10 @@
   </header>
 
   <main class="clients-panel">
-    <article class="client-card" *ngFor="let client of clients" [ngClass]="client.status" routerLink="/mecanico/seguimiento">
+    <article class="client-card" *ngFor="let client of clients" [ngClass]="getStatus(client)" [routerLink]="['/mecanico','seguimiento']" [queryParams]="{ clientId: client.id }">
       <div class="client-topline">
         <h2>{{ client.userName }}</h2>
-        <span class="status-pill">{{ getStatusLabel(client.status) }}</span>
+        <span class="status-pill">{{ getStatusLabel(getStatus(client)) }}</span>
       </div>
 
       <div class="client-details">
