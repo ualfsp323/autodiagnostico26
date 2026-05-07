@@ -15,6 +15,7 @@ import { AuthStateService } from '../../services/auth-state.service';
 export class SeguimientoComponent implements OnInit {
   private readonly roomType: ChatRoomType = 'SEGUIMIENTO';
   private readonly participantId = 1;
+  private readonly sessionUuid = `seguimiento-client-${this.participantId}`;
 
   userOnline = false;
   unreadCount = 0;
@@ -36,7 +37,7 @@ export class SeguimientoComponent implements OnInit {
       }
     });
 
-    this.chatApiService.unreadCount(this.roomType).subscribe({
+    this.chatApiService.unreadCount(this.roomType, this.sessionUuid).subscribe({
       next: (count) => {
         this.unreadCount = count;
       }

@@ -163,7 +163,7 @@ export class LoginComponent implements OnInit {
     });
   }
 
-  private completeSession(user: AuthUserResponse): void {
+private completeSession(user: AuthUserResponse): void {
     this.authStateService.applyAuthenticatedUser({
       id: user.id,
       fullName: user.fullName,
@@ -173,16 +173,18 @@ export class LoginComponent implements OnInit {
     });
 
     this.isSubmitting = false;
-    // If the authenticated user is a workshop (mechanic), redirect to the mechanic dashboard
-    if (user.role === 'TALLER') {
+    
+    // Si es Taller o Admin, lo enviamos a su dashboard de mecánico
+    if (user.role === 'TALLER' || user.role === 'ADMIN') {
       void this.router.navigate(['/mecanico']);
       return;
     }
 
-    const redirectToSeguimiento = this.mode === 'register' || user.role === 'ADMIN';
-    void this.router.navigate([redirectToSeguimiento ? '/seguimiento' : '/home']);
+    // Si es un Usuario Normal, corregimos la ruta a '/usuario/seguimiento'
+    const redirectToSeguimiento = this.mode === 'register';
+    void this.router.navigate([redirectToSeguimiento ? '/usuario/seguimiento' : '/home']);
   }
-
+  
   private extractErrorMessage(error: unknown, fallbackMessage: string): string {
     if (typeof error === 'object' && error !== null && 'error' in error) {
       const responseError = error as { error?: { message?: string } | string };

@@ -36,7 +36,10 @@ public class MechanicService {
                     .clientAvatar(client.getAvatarUrl())
                     .carInfo("Toyota Corolla 2018") // TODO: Get from actual vehicle data
                     .problemDescription(assignment.getDescription())
-                    .status("amarillo") // TODO: Get from assignment status
+                    .status(assignment.getStatus() == null || assignment.getStatus().isBlank() ? "amarillo"
+                            : assignment.getStatus())
+                    .latestUpdate(assignment.getLatestUpdate())
+                    .sessionUuid(assignment.getSessionUuid())
                     .tallerAssignmentId(assignment.getId())
                     .build();
         }).collect(Collectors.toList());
@@ -48,8 +51,25 @@ public class MechanicService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Asignación no encontrada"));
 
         // TODO: Store status in assignment or create a separate status entity
-        // For now, just validate the status
         validateStatus(newStatus);
+        assignment.setStatus(newStatus.toLowerCase());
+        assignment.setUpdatedAt(java.time.LocalDateTime.now());
+        tallerAssignmentRepository.save(assignment);
+    }
+
+    public void updateLatestTrackingMessage(Long mechanicId, Long clientId, String latestUpdate) {
+        TallerAssignment assignment = tallerAssignmentRepository
+                .findByTallerIdAndClientIdAndActiveTrue(mechanicId, clientId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Asignación no encontrada"));
+
+        String normalized = latestUpdate == null ? "" : latestUpdate.trim();
+        if (normalized.length() > 1500) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La actualización es demasiado larga");
+        }
+
+        assignment.setLatestUpdate(normalized.isEmpty() ? null : normalized);
+        assignment.setUpdatedAt(java.time.LocalDateTime.now());
+        tallerAssignmentRepository.save(assignment);
     }
 
     private void validateStatus(String status) {

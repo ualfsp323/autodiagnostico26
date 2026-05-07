@@ -17,13 +17,28 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
 
     boolean existsByRoomType(ChatRoomType roomType);
 
+    boolean existsByRoomTypeAndSessionUuid(ChatRoomType roomType, String sessionUuid);
+
     List<ChatMessage> findTop100ByRoomTypeOrderByCreatedAtDesc(ChatRoomType roomType);
+
+    List<ChatMessage> findTop100ByRoomTypeAndSessionUuidOrderByCreatedAtDesc(ChatRoomType roomType, String sessionUuid);
 
     List<ChatMessage> findTop100ByRoomTypeAndIdGreaterThanOrderByIdAsc(ChatRoomType roomType, Long id);
 
+    List<ChatMessage> findTop100ByRoomTypeAndSessionUuidAndIdGreaterThanOrderByIdAsc(ChatRoomType roomType,
+            String sessionUuid, Long id);
+
     long countByRoomTypeAndSenderRoleAndReadByUserFalse(ChatRoomType roomType, ChatSenderRole senderRole);
+
+    long countByRoomTypeAndSessionUuidAndSenderRoleAndReadByUserFalse(ChatRoomType roomType, String sessionUuid,
+            ChatSenderRole senderRole);
 
     @Modifying
     @Query("update ChatMessage m set m.readByUser = true where m.roomType = :roomType and m.senderRole = :senderRole and m.readByUser = false")
     int markReadByUser(@Param("roomType") ChatRoomType roomType, @Param("senderRole") ChatSenderRole senderRole);
+
+    @Modifying
+    @Query("update ChatMessage m set m.readByUser = true where m.roomType = :roomType and m.sessionUuid = :sessionUuid and m.senderRole = :senderRole and m.readByUser = false")
+    int markReadByUserAndSession(@Param("roomType") ChatRoomType roomType, @Param("sessionUuid") String sessionUuid,
+            @Param("senderRole") ChatSenderRole senderRole);
 }

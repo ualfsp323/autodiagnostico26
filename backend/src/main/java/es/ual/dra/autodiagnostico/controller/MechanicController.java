@@ -36,8 +36,22 @@ public class MechanicController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping("/{mechanicId}/clients/{clientId}/tracking-update")
+    public ResponseEntity<Void> updateTrackingMessage(
+            @PathVariable Long mechanicId,
+            @PathVariable Long clientId,
+            @RequestBody TrackingUpdateRequest request) {
+        mechanicService.updateLatestTrackingMessage(mechanicId, clientId, request.getMessage());
+        return ResponseEntity.ok().build();
+    }
+
     @lombok.Data
     public static class StatusUpdateRequest {
         private String status;
+    }
+
+    @lombok.Data
+    public static class TrackingUpdateRequest {
+        private String message;
     }
 }

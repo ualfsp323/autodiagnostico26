@@ -1,10 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, inject } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { SeguimientoChatComponent } from '../../components/seguimiento/chat/chat';
 import { AuthStateService } from '../../services/auth-state.service';
-import { SeguimientoService, ClientStatus } from '../../services/seguimiento.service';
+import { MechanicClient, MechanicService } from '../../services/mechanic.service';
+
+type ClientStatus = 'verde' | 'amarillo' | 'naranja' | 'rojo';
 
 @Component({
   selector: 'app-seguimiento',
@@ -14,15 +16,15 @@ import { SeguimientoService, ClientStatus } from '../../services/seguimiento.ser
   styleUrl: './seguimiento.component.css'
 })
 export class SeguimientoComponent {
-  private seguimiento = inject(SeguimientoService);
+  private mechanicService = inject(MechanicService);
   private auth = inject(AuthStateService);
   private route = inject(ActivatedRoute);
+  private cdr = inject(ChangeDetectorRef);
 
   message = '';
-  updates = [
-    'Se ha recibido el coche en el taller.',
-    'Se está revisando el sistema de frenos.'
-  ];
+  updates: string[] = [];
+  tracking: MechanicClient | null = null;
+  loading = true;
 
   // current clientId is read from query param or default
   clientId = 101;
@@ -33,6 +35,8 @@ export class SeguimientoComponent {
     if (!Number.isNaN(parsed) && parsed > 0) {
       this.clientId = parsed;
     }
+
+    this.loadTracking();
   }
 
   get isMechanic(): boolean {
@@ -41,11 +45,26 @@ export class SeguimientoComponent {
   }
 
   get status(): ClientStatus {
-    return this.seguimiento.getStatus(this.clientId);
+    return (this.tracking?.status ?? 'amarillo') as ClientStatus;
   }
 
   setStatus(status: ClientStatus): void {
-    this.seguimiento.setStatus(this.clientId, status);
+    const mechanicId = this.auth.userId();
+    if (!mechanicId) {
+      return;
+    }
+
+    this.mechanicService.updateClientStatus(mechanicId, this.clientId, status).subscribe({
+      next: () => {
+        if (this.tracking) {
+          this.tracking.status = status;
+        }
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error actualizando estado:', err);
+      }
+    });
   }
 
   addMessage(): void {
@@ -54,7 +73,67 @@ export class SeguimientoComponent {
       return;
     }
 
-    this.updates = [trimmed, ...this.updates];
-    this.message = '';
+    const mechanicId = this.auth.userId();
+    if (!mechanicId) {
+      return;
+    }
+
+    this.mechanicService.updateTrackingMessage(mechanicId, this.clientId, trimmed).subscribe({
+      next: () => {
+        this.updates = [trimmed, ...this.updates].slice(0, 8);
+        if (this.tracking) {
+          this.tracking.latestUpdate = trimmed;
+        }
+        this.message = '';
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error guardando actualización:', err);
+      }
+    });
+  }
+
+  get chatParticipantId(): number {
+    return this.clientId;
+  }
+
+  get chatSessionUuid(): string {
+    if (this.tracking?.sessionUuid) {
+      return this.tracking.sessionUuid;
+    }
+    return `seguimiento-client-${this.clientId}`;
+  }
+
+  private loadTracking(): void {
+    const userId = this.auth.userId();
+    if (!userId) {
+      this.loading = false;
+      return;
+    }
+
+    // Solo hacemos la llamada al MechanicService si el rol es TALLER o ADMIN
+    if (this.isMechanic) {
+      this.mechanicService.getClientsForMechanic(userId).subscribe({
+        next: (clients) => {
+          this.tracking = clients.find((c) => c.clientId === this.clientId) ?? null;
+          const initial = this.tracking?.latestUpdate;
+          this.updates = initial ? [initial] : [];
+          this.loading = false;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Error cargando seguimiento:', err);
+          this.loading = false;
+          this.cdr.detectChanges();
+        }
+      });
+    } else {
+      // Lógica segura para el USUARIO NORMAL (USER)
+      // TODO: Aquí deberás llamar a tu servicio de usuario cuando lo tengas.
+      // Por ahora, lo dejamos en null para que cargue la vista sin crashear.
+      this.tracking = null; 
+      this.loading = false;
+      this.cdr.detectChanges();
+    }
   }
 }

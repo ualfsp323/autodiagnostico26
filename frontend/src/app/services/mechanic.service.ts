@@ -11,6 +11,8 @@ export interface MechanicClient {
   carInfo: string;
   problemDescription: string;
   status: 'verde' | 'amarillo' | 'naranja' | 'rojo';
+  latestUpdate?: string;
+  sessionUuid?: string;
   tallerAssignmentId: number;
 }
 
@@ -28,6 +30,10 @@ export class MechanicService {
 
   updateClientStatus(mechanicId: number, clientId: number, status: string): Observable<void> {
     return this.http.post<void>(`${this.baseUrl}/${mechanicId}/clients/${clientId}/status`, { status });
+  }
+
+  updateTrackingMessage(mechanicId: number, clientId: number, message: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/${mechanicId}/clients/${clientId}/tracking-update`, { message });
   }
 
   loadClientsForMechanic(mechanicId: number): void {

@@ -29,26 +29,24 @@ public class ChatController {
     @PostMapping("/{roomType}/join")
     public ResponseEntity<ChatJoinResponseDTO> joinRoom(
             @PathVariable String roomType,
-            @RequestParam Long participantId
-    ) {
+            @RequestParam Long participantId) {
         return ResponseEntity.ok(chatService.joinRoom(roomType, participantId));
     }
 
     @PostMapping("/{roomType}/leave")
     public ResponseEntity<ChatJoinResponseDTO> leaveRoom(
             @PathVariable String roomType,
-            @RequestParam Long participantId
-    ) {
+            @RequestParam Long participantId) {
         return ResponseEntity.ok(chatService.leaveRoom(roomType, participantId));
     }
 
     @GetMapping("/{roomType}/mensajes")
     public ResponseEntity<List<ChatMessageResponseDTO>> listMessages(
             @PathVariable String roomType,
+            @RequestParam String sessionUuid,
             @RequestParam(defaultValue = "50") Integer limit,
-            @RequestParam(required = false) Long afterId
-    ) {
-        return ResponseEntity.ok(chatService.listMessages(roomType, limit, afterId));
+            @RequestParam(required = false) Long afterId) {
+        return ResponseEntity.ok(chatService.listMessages(roomType, sessionUuid, limit, afterId));
     }
 
     @PostMapping("/mensajes")
@@ -57,20 +55,19 @@ public class ChatController {
     }
 
     @GetMapping("/{roomType}/unread")
-    public ResponseEntity<Long> unreadCount(@PathVariable String roomType) {
-        return ResponseEntity.ok(chatService.unreadCount(roomType));
+    public ResponseEntity<Long> unreadCount(@PathVariable String roomType, @RequestParam String sessionUuid) {
+        return ResponseEntity.ok(chatService.unreadCount(roomType, sessionUuid));
     }
 
     @PostMapping("/{roomType}/mark-read")
-    public ResponseEntity<Integer> markReadByUser(@PathVariable String roomType) {
-        return ResponseEntity.ok(chatService.markReadByUser(roomType));
+    public ResponseEntity<Integer> markReadByUser(@PathVariable String roomType, @RequestParam String sessionUuid) {
+        return ResponseEntity.ok(chatService.markReadByUser(roomType, sessionUuid));
     }
 
     @GetMapping("/{roomType}/presence")
     public ResponseEntity<Boolean> userPresence(
             @PathVariable String roomType,
-            @RequestParam Long participantId
-    ) {
+            @RequestParam Long participantId) {
         return ResponseEntity.ok(chatService.isUserOnline(roomType, participantId));
     }
 }

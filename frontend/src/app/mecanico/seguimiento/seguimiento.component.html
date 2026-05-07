@@ -2,8 +2,19 @@
   <div class="left">
     <header>
       <p class="eyebrow">Seguimiento</p>
-      <h1>Cliente en taller</h1>
+      <h1>Cliente en taller #{{ clientId }}</h1>
     </header>
+
+    @if (loading) {
+      <p class="info">Cargando seguimiento...</p>
+    }
+
+    @if (!loading && tracking?.latestUpdate) {
+      <div class="last-update">
+        <p class="title">Última actualización guardada</p>
+        <p>{{ tracking?.latestUpdate }}</p>
+      </div>
+    }
 
     <div class="status-row">
       <label>Status:</label>
@@ -28,6 +39,6 @@
   </div>
 
   <aside class="right">
-    <app-seguimiento-chat></app-seguimiento-chat>
+    <app-seguimiento-chat [participantIdInput]="chatParticipantId" [sessionUuidInput]="chatSessionUuid"></app-seguimiento-chat>
   </aside>
 </section>

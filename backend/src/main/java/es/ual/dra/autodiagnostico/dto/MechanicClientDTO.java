@@ -27,5 +27,9 @@ public class MechanicClientDTO {
 
     private String status; // verde, amarillo, naranja, rojo
 
+    private String latestUpdate;
+
+    private String sessionUuid;
+
     private Long tallerAssignmentId;
 }
