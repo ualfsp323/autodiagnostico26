@@ -6,10 +6,10 @@
   min-height: calc(100dvh - 240px);
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: center;
+  justify-content: flex-start;
+  align-items: stretch;
   gap: 16px;
   background: #f3f3f3;
-  padding: 2rem;
+  padding: 2.5rem clamp(1.5rem, 5vw, 4rem);
   box-sizing: border-box;
 }

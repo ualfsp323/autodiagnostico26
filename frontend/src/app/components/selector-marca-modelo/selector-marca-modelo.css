@@ -1,0 +1,102 @@
+:host {
+  --accent:       #1a6bbd;
+  --accent-light: rgba(26, 107, 189, 0.10);
+  --bg:           #f8fafc;
+  --bg-card:      #ffffff;
+  --ink:          #111827;
+  --ink-muted:    #6b7280;
+  --ink-faint:    #9ca3af;
+  --border-input: #e5e7eb;
+  --radius:       8px;
+  --font:         'Exo 2', sans-serif;
+  --transition:   180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.smm-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 520px) {
+  .smm-row { grid-template-columns: 1fr; }
+}
+
+.smm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.smm-label {
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  transition: color var(--transition);
+}
+
+.smm-label-muted { color: var(--ink-faint); }
+
+.smm-select-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius);
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.smm-select-wrap:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+.smm-icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin-left: 10px;
+  color: var(--ink-muted);
+  pointer-events: none;
+}
+
+.smm-chevron {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin-right: 10px;
+  color: var(--accent);
+  pointer-events: none;
+}
+
+.smm-select {
+  flex: 1;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 9px 6px 9px 8px;
+  font-family: var(--font);
+  font-size: 14px;
+  color: var(--ink);
+  cursor: pointer;
+  min-width: 0;
+}
+
+.smm-select option[disabled] { color: var(--ink-faint); }
+
+.smm-disabled {
+  background: var(--bg);
+  opacity: 0.65;
+}
+
+.smm-disabled .smm-select { cursor: not-allowed; }
+
+.smm-loading .smm-chevron {
+  animation: smm-spin 0.8s linear infinite;
+}
+
+@keyframes smm-spin { to { transform: rotate(360deg); } }

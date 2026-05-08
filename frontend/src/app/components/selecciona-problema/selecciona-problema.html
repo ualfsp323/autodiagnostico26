@@ -1,46 +1,88 @@
-<section class="selecciona-problema">
+<section class="sp-card">
 
-  <!-- Separador con texto -->
-  <div class="separador">
-    <hr class="separador-linea" />
-    <span class="separador-texto">Selecciona el problema</span>
-    <hr class="separador-linea" />
+  <div class="sp-header">
+    <h2 class="sp-title">¿Qué le pasa a tu vehículo?</h2>
+    <span class="sp-subtitle">Puedes seleccionar varios problemas de distintas categorías</span>
   </div>
 
-  <!-- Dropdown — ¿Qué problema tiene tu vehículo? -->
-  <div class="dropdown-wrapper">
-    <button
-      id="btn-problema"
-      type="button"
-      class="dropdown-btn"
-      [class.abierto]="dropdownAbierto"
-      (click)="toggleDropdown()"
-      [attr.aria-expanded]="dropdownAbierto"
-      aria-haspopup="listbox"
-    >
-      <span class="dropdown-texto">
-        {{ problemaSeleccionado ?? '¿Qué problema tiene tu vehículo?' }}
-      </span>
-      <span class="dropdown-chevron" [class.rotado]="dropdownAbierto" aria-hidden="true">▾</span>
-    </button>
+  <!-- Fila de chips de categoría -->
+  <div class="sp-chips" role="tablist" aria-label="Categorías de problemas">
+    @for (cat of categoriasConfig; track cat.nombre) {
+      <button
+        type="button"
+        class="sp-chip"
+        role="tab"
+        [class.sp-chip-active]="categoriaActiva === cat.nombre"
+        [class.sp-chip-done]="categoriaConProblema(cat.nombre) && categoriaActiva !== cat.nombre"
+        [attr.aria-selected]="categoriaActiva === cat.nombre"
+        (click)="toggleCategoria(cat.nombre)"
+      >
+        <span class="sp-chip-icon" aria-hidden="true">{{ cat.icono }}</span>
+        <span class="sp-chip-label">{{ cat.nombre }}</span>
+        @if (categoriaConProblema(cat.nombre)) {
+          <span class="sp-chip-dot" aria-hidden="true"></span>
+        }
+      </button>
+    }
+  </div>
 
-    <ul
-      class="dropdown-lista"
-      role="listbox"
-      [class.visible]="dropdownAbierto"
-      aria-label="Lista de problemas del vehículo"
-    >
-      @for (problema of problemas; track problema) {
-        <li
-          class="dropdown-item"
-          role="option"
-          [class.seleccionado]="problema === problemaSeleccionado"
-          (click)="seleccionarProblema(problema)"
-        >
-          {{ problema }}
-        </li>
+  <!-- Sub-panel con problemas de la categoría activa -->
+  @if (categoriaActiva) {
+    <div class="sp-subpanel" role="tabpanel">
+      @if (esOtro(categoriaActiva)) {
+        <textarea
+          class="sp-textarea"
+          placeholder="Describe el problema de tu vehículo..."
+          [value]="descripcionLibre"
+          (input)="onDescripcionLibre($any($event.target).value)"
+          rows="3"
+        ></textarea>
+      } @else {
+        <div class="sp-subpanel-grid">
+          @for (item of problemasPorCategoria(categoriaActiva); track item.label) {
+            <button
+              type="button"
+              class="sp-item"
+              [class.sp-item-selected]="isSelected(item.label)"
+              (click)="toggleProblema(item.label)"
+            >
+              @if (isSelected(item.label)) {
+                <svg class="sp-item-check" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fill-rule="evenodd" clip-rule="evenodd"
+                        d="M16.707 5.293a1 1 0 0 1 0 1.414l-8 8a1 1 0 0 1-1.414 0l-4-4a1 1 0 0 1 1.414-1.414L8 12.586l7.293-7.293a1 1 0 0 1 1.414 0Z"/>
+                </svg>
+              } @else {
+                <span class="sp-item-check"></span>
+              }
+              {{ item.label }}
+            </button>
+          }
+        </div>
       }
-    </ul>
-  </div>
+    </div>
+  }
+
+  <!-- Resumen de todos los problemas seleccionados -->
+  @if (tieneSeleccion) {
+    <div class="sp-selected-summary">
+      @for (label of problemasSeleccionados; track label) {
+        <span class="sp-summary-tag">
+          <svg class="sp-summary-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path fill-rule="evenodd" clip-rule="evenodd"
+                  d="M16.707 5.293a1 1 0 0 1 0 1.414l-8 8a1 1 0 0 1-1.414 0l-4-4a1 1 0 0 1 1.414-1.414L8 12.586l7.293-7.293a1 1 0 0 1 1.414 0Z"/>
+          </svg>
+          {{ label }}
+        </span>
+      }
+      @if (descripcionLibre.trim()) {
+        <span class="sp-summary-tag sp-summary-tag-libre">
+          <svg class="sp-summary-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path d="M13.586 3.586a2 2 0 1 1 2.828 2.828l-.793.793-2.828-2.828.793-.793ZM11.379 5.793 3 14.172V17h2.828l8.38-8.379-2.83-2.828Z"/>
+          </svg>
+          {{ descripcionLibre }}
+        </span>
+      }
+    </div>
+  }
 
 </section>
