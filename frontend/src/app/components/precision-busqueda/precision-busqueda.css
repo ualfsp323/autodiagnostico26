@@ -1,0 +1,41 @@
+:host {
+  --accent:       #1a6bbd;
+  --accent-faint: rgba(26, 107, 189, 0.06);
+  --transition:   180ms cubic-bezier(0.16, 1, 0.3, 1);
+  --font:         'Exo 2', sans-serif;
+}
+
+.pb-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--accent-faint);
+  border-radius: 8px;
+  border: 1px solid rgba(26, 107, 189, 0.12);
+}
+
+.pb-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.pb-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  transition: background var(--transition), transform var(--transition);
+}
+
+.pb-dot-filled {
+  background: var(--accent);
+  transform: scale(1.15);
+}
+
+.pb-label {
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent);
+}

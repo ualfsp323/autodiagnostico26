@@ -1,24 +1,33 @@
 import { Component } from '@angular/core';
-import { BuscarVehiculo } from '../buscar-vehiculo/buscar-vehiculo';
-import { SeleccionaProblema } from '../selecciona-problema/selecciona-problema';
+import { IntroducirVehiculo } from '../introducir-vehiculo/introducir-vehiculo';
+import { SeleccionaProblema, ProblemaSeleccion } from '../selecciona-problema/selecciona-problema';
 import { VehicleSearchContext } from '../../services/api.models';
 
 @Component({
   selector: 'app-home-page',
   standalone: true,
-  imports: [BuscarVehiculo, SeleccionaProblema],
+  imports: [IntroducirVehiculo, SeleccionaProblema],
   templateUrl: './home.html',
-  styleUrl: './home.css'
+  styleUrl: './home.css',
 })
 export class HomeComponent {
   vehicleContext: VehicleSearchContext | null = null;
-  problemaSeleccionado: string | null = null;
+  seleccion: ProblemaSeleccion = { problemas: [], descripcionLibre: '' };
+
+  get tieneProblema(): boolean {
+    return this.seleccion.problemas.length > 0 || !!this.seleccion.descripcionLibre.trim();
+  }
 
   onVehicleContextChange(ctx: VehicleSearchContext): void {
     this.vehicleContext = ctx;
   }
 
-  onProblemaChange(problema: string | null): void {
-    this.problemaSeleccionado = problema;
+  onProblemaChange(seleccion: ProblemaSeleccion): void {
+    this.seleccion = seleccion;
+  }
+
+  onEnviar(): void {
+    // TODO: navegar a la pantalla de diagnóstico
+    console.log('Enviar', this.seleccion, this.vehicleContext);
   }
 }
