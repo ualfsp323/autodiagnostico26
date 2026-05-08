@@ -1,0 +1,8 @@
+<div class="pb-bar">
+  <div class="pb-dots">
+    @for (filled of dots; track $index) {
+      <span class="pb-dot" [class.pb-dot-filled]="filled"></span>
+    }
+  </div>
+  <span class="pb-label">{{ label }}</span>
+</div>
