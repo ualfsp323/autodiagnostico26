@@ -78,7 +78,6 @@ export class IntroducirVehiculo implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   constructor(private vehicleApi: VehicleApiService) {}
-
   ngOnInit(): void {
     this.loadBrands();
   }
@@ -150,13 +149,36 @@ export class IntroducirVehiculo implements OnInit, OnDestroy {
     this.emitContext();
   }
 
-  private loadBrands(): void {
-    this.loadingBrands = true;
-    this.vehicleApi.getBrands().pipe(takeUntil(this.destroy$)).subscribe({
-      next: brands => { this.brands = brands; this.loadingBrands = false; },
-      error: () => { this.loadingBrands = false; },
-    });
-  }
+private loadBrands(): void {
+
+  this.loadingBrands = true;
+
+  queueMicrotask(() => {
+
+    this.vehicleApi
+      .getBrands()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+
+        next: brands => {
+
+          this.brands = brands;
+
+          setTimeout(() => {
+            this.loadingBrands = false;
+          });
+        },
+
+        error: () => {
+
+          setTimeout(() => {
+            this.loadingBrands = false;
+          });
+        },
+      });
+
+  });
+}
 
   private emitContext(): void {
     const modelName = this.models.find(m => m.id === this.selectedModelId)?.name ?? null;

@@ -18,12 +18,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(
-        name = "taller_assignment",
-        uniqueConstraints = {
-            @UniqueConstraint(name = "uk_taller_client_session", columnNames = {"taller_id", "client_id", "session_uuid"})
-        }
-)
+@Table(name = "taller_assignment", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_taller_client_session", columnNames = { "taller_id", "client_id", "session_uuid" })
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -66,6 +63,12 @@ public class TallerAssignment {
     @Column(name = "description", length = 500)
     private String description;
 
+    @Column(name = "status", nullable = false, length = 20)
+    private String status;
+
+    @Column(name = "latest_update", length = 1500)
+    private String latestUpdate;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -77,6 +80,9 @@ public class TallerAssignment {
         LocalDateTime now = LocalDateTime.now();
         if (sessionUuid == null) {
             sessionUuid = UUID.randomUUID().toString();
+        }
+        if (status == null || status.isBlank()) {
+            status = "amarillo";
         }
         createdAt = now;
         updatedAt = now;

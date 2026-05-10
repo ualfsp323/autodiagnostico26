@@ -87,20 +87,6 @@ export class LoginComponent implements OnInit {
     this.isSubmitting = true;
     this.errorMessage = '';
 
-    // TODO: MOCK TEMPORAL - Bypass de autenticación para pruebas locales
-    // Eliminar esta lógica una vez que el backend esté operativo.
-    if (email === 'admin' && this.password === 'admin') {
-      console.warn('⚠️ Usando sesión mock temporal (admin/admin)');
-      this.completeSession({
-        id: 999,
-        fullName: 'Administrador Temporal',
-        email: 'admin@example.com',
-        role: 'ADMIN',
-        avatarUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=admin',
-        createdAt: new Date().toISOString()
-      });
-      return;
-    }
 
     this.authApiService.login({ email, password: this.password }).subscribe({
       next: (user) => this.completeSession(user),
@@ -163,7 +149,7 @@ export class LoginComponent implements OnInit {
     });
   }
 
-  private completeSession(user: AuthUserResponse): void {
+private completeSession(user: AuthUserResponse): void {
     this.authStateService.applyAuthenticatedUser({
       id: user.id,
       fullName: user.fullName,
@@ -173,10 +159,18 @@ export class LoginComponent implements OnInit {
     });
 
     this.isSubmitting = false;
-    const redirectToSeguimiento = this.mode === 'register' || user.role === 'ADMIN';
-    void this.router.navigate([redirectToSeguimiento ? '/seguimiento' : '/home']);
-  }
+    
+    // Si es Taller o Admin, lo enviamos a su dashboard de mecánico
+    if (user.role === 'TALLER' || user.role === 'ADMIN') {
+      void this.router.navigate(['/mecanico']);
+      return;
+    }
 
+    // Si es un Usuario Normal, corregimos la ruta a '/usuario/seguimiento'
+    const redirectToSeguimiento = this.mode === 'register';
+    void this.router.navigate([redirectToSeguimiento ? '/usuario/seguimiento' : '/home']);
+  }
+  
   private extractErrorMessage(error: unknown, fallbackMessage: string): string {
     if (typeof error === 'object' && error !== null && 'error' in error) {
       const responseError = error as { error?: { message?: string } | string };

@@ -15,32 +15,31 @@ import { seguimientoGuard } from './auth/seguimiento.guard';
 import { authGuard } from './auth/auth.guard';
 
 export const routes: Routes = [
+	{ path: '', pathMatch: 'full', redirectTo: 'login' },
+	{ path: 'home', component: HomeComponent },
+	{ path: 'diagnostico', component: DiagnosticoComponent },
+	{ path: 'taller', component: TallerComponent },
+	{ path: 'repuestos', component: RepuestosComponent },
+	{ path: 'mecanico', loadComponent: () => import('./mecanico/mecanico.component').then((m) => m.MecanicoComponent) },
+	{
+		path: 'usuario/seguimiento',
+		component: SeguimientoComponent,
+		canActivate: [seguimientoGuard],
+		children: [
+			{ path: '', pathMatch: 'full', redirectTo: 'chat' },
+			{ path: 'chat', component: SeguimientoChatComponent }
+		]
+	},
+	{ path: 'presupuesto', component: PresupuestoComponent },
+	{ path: 'mecanico/seguimiento', loadComponent: () => import('./mecanico/seguimiento/seguimiento.component').then((m) => m.SeguimientoComponent), canActivate: [seguimientoGuard], children: [
+		{ path: '', pathMatch: 'full', redirectTo: 'chat' },
+		{ path: 'chat', loadComponent: () => import('./components/seguimiento/chat/chat').then((m) => m.SeguimientoChatComponent) }
+	] },
+	{ path: 'historial', component: HistorialComponent },
+	{ path: 'contacto', component: ContactoComponent },
+	{ path: 'perfil', component: PerfilComponent },
+	{ path: 'mis-vehiculos', component: MisVehiculosComponent },
 	{ path: 'login', component: LoginComponent },
 	{ path: 'registro', component: LoginComponent },
-	{
-		path: '',
-		canActivate: [authGuard],
-		children: [
-			{ path: '', pathMatch: 'full', redirectTo: 'home' },
-			{ path: 'home', component: HomeComponent },
-			{ path: 'diagnostico', component: DiagnosticoComponent },
-			{ path: 'taller', component: TallerComponent },
-			{ path: 'repuestos', component: RepuestosComponent },
-			{
-				path: 'seguimiento',
-				component: SeguimientoComponent,
-				canActivate: [seguimientoGuard],
-				children: [
-					{ path: '', pathMatch: 'full', redirectTo: 'chat' },
-					{ path: 'chat', component: SeguimientoChatComponent }
-				]
-			},
-			{ path: 'presupuesto', component: PresupuestoComponent },
-			{ path: 'historial', component: HistorialComponent },
-			{ path: 'contacto', component: ContactoComponent },
-			{ path: 'perfil', component: PerfilComponent },
-			{ path: 'mis-vehiculos', component: MisVehiculosComponent },
-			{ path: '**', redirectTo: 'home' }
-		]
-	}
+	{ path: '**', redirectTo: 'login' }
 ];

@@ -28,8 +28,10 @@ export class SelectorMarcaModelo implements OnChanges {
   ngOnChanges(changes: SimpleChanges): void {
     // Si la lista de modelos se vacía (cambio de marca), resetear modelo
     if (changes['models'] && this.models.length === 0) {
-      this.selectedModelId = null;
-    }
+      queueMicrotask(() => {
+        this.selectedModelId = null;
+      });   
+   }
   }
 
   onBrandChange(value: string): void {

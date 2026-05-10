@@ -1,5 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectorRef, Component, Inject, NgZone, OnDestroy, OnInit, PLATFORM_ID } from '@angular/core';
+import { ChangeDetectorRef, Component, Inject, Input, NgZone, OnDestroy, OnInit, PLATFORM_ID } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ChatApiService } from '../../../services/chat-api.service';
 import { ChatMessageRequest, ChatMessageResponse, ChatRoomType, ChatSenderRole } from '../../../services/api.models';
@@ -33,13 +33,21 @@ export class SeguimientoChatComponent implements OnInit, OnDestroy {
   sending = false;
 
   messages: ChatMessage[] = [];
+
+  @Input() participantIdInput: number | null = null;
+  @Input() sessionUuidInput: string | null = null;
   
   get currentUserId(): number {
     return this.authStateService.userId() ?? 0;
   }
   
   get participantId(): number {
-    return this.currentUserId;
+
+    if (this.participantIdInput && this.participantIdInput > 0) {
+      return this.participantIdInput;
+    }
+
+    return this.authStateService.userId() ?? 0;
   }
 
   get isMechanic(): boolean {
@@ -59,9 +67,16 @@ export class SeguimientoChatComponent implements OnInit, OnDestroy {
   }
 
   get sessionUuid(): string {
-    // Usar un UUID único por usuario - en producción, esto debería venir del servidor
-    const userId = this.currentUserId;
-    return `seguimiento-user-${userId}`;
+
+    const provided = this.sessionUuidInput?.trim();
+
+    if (provided) {
+      return provided;
+    }
+
+    const stored = localStorage.getItem('trackingSessionUuid');
+
+    return stored ?? '';
   }
 
   constructor(
@@ -72,46 +87,80 @@ export class SeguimientoChatComponent implements OnInit, OnDestroy {
     @Inject(PLATFORM_ID) private readonly platformId: object
   ) {}
 
-  ngOnInit(): void {
-    if (!isPlatformBrowser(this.platformId) || !this.authStateService.canAccessSeguimiento()) {
-      return;
+    ngOnInit(): void {
+
+
+
+      console.log('PARTICIPANT', this.participantId);
+      console.log('SESSION UUID', this.sessionUuid);
+
+      if (!this.participantId || !this.sessionUuid) {
+        return;
+      }
+
+      this.joinChat();
     }
 
-    // Validar que tenemos un usuario logueado
-    const userId = this.currentUserId;
-    if (!userId || userId === 0) {
-      console.error('Chat: No hay usuario logueado válido. UserId:', userId);
-      this.userOnline = false;
-      return;
-    }
+joinChat(): void {
 
-    this.refreshPresence();
-    this.chatApiService.joinRoom(this.roomType, userId).subscribe({
+  this.chatApiService
+    .joinRoom('SEGUIMIENTO', this.participantId!)
+    .subscribe({
+
       next: () => {
-        this.userOnline = true;
-        this.fetchMessages();
+
+        console.log('JOIN OK');
+
+        this.loadMessages();
         this.startMessageRefresh();
-        this.chatApiService.markReadByUser(this.roomType).subscribe();
+
       },
+
       error: (err) => {
-        console.error('Error joining chat room:', err);
-        this.userOnline = false;
+        console.error(err);
       }
     });
-  }
+}
+loadMessages(): void {
 
+  this.chatApiService
+    .getMessages(
+      'SEGUIMIENTO',
+      this.sessionUuid
+    )
+    .subscribe({
+
+      next: (messages: ChatMessageResponse[]) => {
+
+        this.messages = messages.map(
+          (message) => this.toViewMessage(message)
+        );
+
+        console.log('MESSAGES', this.messages);
+
+        this.latestMessageId =
+          messages.length > 0
+            ? messages[messages.length - 1].id
+            : null;
+      },
+
+      error: (err: any) => {
+        console.error(err);
+      }
+    });
+}
   ngOnDestroy(): void {
     if (!isPlatformBrowser(this.platformId) || !this.authStateService.canAccessSeguimiento()) {
       return;
     }
 
-    const userId = this.currentUserId;
-    if (!userId || userId === 0) {
+    const participantId = this.participantId;
+    if (!participantId || participantId === 0) {
       return;
     }
 
     this.stopMessageRefresh();
-    this.chatApiService.leaveRoom(this.roomType, userId).subscribe();
+    this.chatApiService.leaveRoom(this.roomType, participantId).subscribe();
   }
 
   get unreadCount(): number {
@@ -138,7 +187,7 @@ export class SeguimientoChatComponent implements OnInit, OnDestroy {
     this.sending = true;
 
     const payload: ChatMessageRequest = {
-      participantId: userId,
+      participantId: this.participantId,
       roomType: this.roomType,
       senderRole: this.senderRole,
       sessionUuid: this.sessionUuid,
@@ -159,7 +208,7 @@ export class SeguimientoChatComponent implements OnInit, OnDestroy {
   }
 
   private fetchMessages(): void {
-    this.chatApiService.listMessages(this.roomType, 60).subscribe({
+    this.chatApiService.listMessages(this.roomType, this.sessionUuid, 60).subscribe({
       next: (messages) => {
         this.messages = messages.map((message) => this.toViewMessage(message));
         this.latestMessageId = messages.length > 0 ? messages[messages.length - 1].id : null;
@@ -172,20 +221,21 @@ export class SeguimientoChatComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.chatApiService.listMessages(this.roomType, 60, this.latestMessageId).subscribe({
+    this.chatApiService.listMessages(this.roomType, this.sessionUuid, 60, this.latestMessageId).subscribe({
       next: (messages) => {
         this.upsertMessages(messages);
+        this.cdr.detectChanges();
       }
     });
   }
 
   private refreshPresence(): void {
-    const userId = this.currentUserId;
-    if (!userId || userId === 0) {
+    const participantId = this.participantId;
+    if (!participantId || participantId === 0) {
       return;
     }
 
-    this.chatApiService.isUserOnline(this.roomType, userId).subscribe({
+    this.chatApiService.isUserOnline(this.roomType, participantId).subscribe({
       next: (isOnline) => {
         this.userOnline = isOnline;
       }
@@ -201,7 +251,7 @@ export class SeguimientoChatComponent implements OnInit, OnDestroy {
           this.refreshPresence();
           this.cdr.detectChanges();
         });
-      }, 2500);
+      }, 5000);
     });
   }
 
@@ -234,8 +284,8 @@ export class SeguimientoChatComponent implements OnInit, OnDestroy {
   private toViewMessage(message: ChatMessageResponse): ChatMessage {
     const parsedDate = new Date(message.createdAt);
     const hasValidDate = !Number.isNaN(parsedDate.getTime());
-    
-    const isMyMessage = message.participantId === this.currentUserId;
+
+    const isMyMessage = this.isMechanic ? message.senderRole === 'MECANICO' : message.senderRole === 'USUARIO';
     const isMechanicMessage = message.senderRole === 'MECANICO';
 
     return {

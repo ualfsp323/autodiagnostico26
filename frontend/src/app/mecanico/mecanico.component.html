@@ -1,0 +1,41 @@
+<section class="mechanic-shell">
+  <header class="mechanic-header">
+    <div>
+      <p class="eyebrow">Panel de mecánico</p>
+      <h1>{{ mechanicName }}</h1>
+      <p class="workshop">{{ workshopName }}</p>
+    </div>
+
+    <a routerLink="/mecanico" class="clients-button">Clientes</a>
+  </header>
+
+  <main class="clients-panel">
+    @if (loading) {
+      <p>Cargando clientes...</p>
+    }
+
+    @if (error) {
+      <p class="error">{{ error }}</p>
+    }
+
+    @if (!loading && !error && clients.length > 0) {
+      <article class="client-card" *ngFor="let client of clients" [ngClass]="'status-' + client.status" [routerLink]="['/mecanico','seguimiento']" [queryParams]="{ clientId: client.clientId }">
+        <div class="client-topline">
+          <h2>{{ client.clientName }}</h2>
+          <span class="status-pill">{{ getStatusLabel(client.status) }}</span>
+        </div>
+
+        <div class="client-details">
+          <p><strong>Coche:</strong> {{ client.carInfo }}</p>
+          <p><strong>Problema:</strong> {{ client.problemDescription }}</p>
+        </div>
+
+        <p class="client-action">Ver seguimiento</p>
+      </article>
+    }
+
+    @if (!loading && !error && clients.length === 0) {
+      <p>No hay clientes asignados</p>
+    }
+  </main>
+</section>
