@@ -20,7 +20,7 @@ export class SeguimientoComponent implements OnInit {
   participantId = 0;
   sessionUuid = '';
   tracking: any = null;
-
+  hasTracking = false;
   userOnline = false;
   unreadCount = 0;
 
@@ -54,6 +54,7 @@ loadTracking(): void {
 
       next: (tracking) => {
 
+        this.hasTracking = true;
         this.tracking = tracking;
 
         this.sessionUuid = tracking.sessionUuid ?? '';
@@ -69,7 +70,10 @@ loadTracking(): void {
       },
 
       error: (err) => {
-        console.error(err);
+        if (err.status !== 404) {
+          console.error(err);
+        }        
+        this.hasTracking = false;
       }
     });
 }

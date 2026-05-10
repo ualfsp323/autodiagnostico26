@@ -13,7 +13,24 @@
     </a>
   </nav>
 
-  <div class="seguimiento-content">
+<div class="seguimiento-content">
+
+  @if (hasTracking) {
+
     <router-outlet />
-  </div>
+
+  } @else {
+
+    <div class="seguimiento-empty">
+
+      <h3>No tienes seguimiento de un coche activo</h3>
+
+      <p>
+        Todavía no has eleguido a un mecánico para tu coche.
+      </p>
+
+    </div>
+  }
+
+</div>
 </section>

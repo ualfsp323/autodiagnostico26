@@ -14,6 +14,7 @@ import es.ual.dra.autodiagnostico.repository.TallerAssignmentRepository;
 import es.ual.dra.autodiagnostico.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 
+
 @Service
 @RequiredArgsConstructor
 public class MechanicService {
@@ -25,8 +26,7 @@ public class MechanicService {
 
         TallerAssignment assignment = tallerAssignmentRepository
                 .findFirstByClientIdAndActiveTrue(clientId)
-                .orElseThrow(() -> new IllegalArgumentException("Tracking no encontrado"));
-
+                .orElseThrow(() -> new ResponseStatusException(   HttpStatus.NOT_FOUND,"Tracking no encontrado"));
         AppUser client = userRepository.findById(clientId)
                 .orElseThrow(() -> new IllegalArgumentException("Cliente no encontrado"));
 
