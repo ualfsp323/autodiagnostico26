@@ -38,7 +38,13 @@
     </div>
   </div>
 
-  <aside class="right">
-    <app-seguimiento-chat [participantIdInput]="chatParticipantId" [sessionUuidInput]="chatSessionUuid"></app-seguimiento-chat>
-  </aside>
+ <aside class="right">
+@if (tracking?.sessionUuid) {
+  <app-seguimiento-chat
+    [participantIdInput]="chatParticipantId"
+    [sessionUuidInput]="tracking!.sessionUuid">
+  </app-seguimiento-chat>
+}
+</aside>
+
 </section>

@@ -87,20 +87,6 @@ export class LoginComponent implements OnInit {
     this.isSubmitting = true;
     this.errorMessage = '';
 
-    // TODO: MOCK TEMPORAL - Bypass de autenticación para pruebas locales
-    // Eliminar esta lógica una vez que el backend esté operativo.
-    if (email === 'admin' && this.password === 'admin') {
-      console.warn('⚠️ Usando sesión mock temporal (admin/admin)');
-      this.completeSession({
-        id: 999,
-        fullName: 'Administrador Temporal',
-        email: 'admin@example.com',
-        role: 'ADMIN',
-        avatarUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=admin',
-        createdAt: new Date().toISOString()
-      });
-      return;
-    }
 
     this.authApiService.login({ email, password: this.password }).subscribe({
       next: (user) => this.completeSession(user),

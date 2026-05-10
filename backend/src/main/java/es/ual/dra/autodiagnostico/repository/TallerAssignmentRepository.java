@@ -40,4 +40,10 @@ public interface TallerAssignmentRepository extends JpaRepository<TallerAssignme
      * Obtener asignaciones por taller y estado
      */
     List<TallerAssignment> findByTallerId(Long tallerId);
+
+    /**
+     * Obtener la asignación activa más reciente para un cliente
+     */
+    Optional<TallerAssignment> findFirstByClientIdAndActiveTrue(Long clientId);
+
 }

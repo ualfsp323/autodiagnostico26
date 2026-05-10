@@ -37,6 +37,12 @@ export class ChatApiService {
   markReadByUser(roomType: ChatRoomType, sessionUuid: string): Observable<number> {
     return this.http.post<number>(`${this.baseUrl}/${roomType}/mark-read?sessionUuid=${encodeURIComponent(sessionUuid)}`, {});
   }
+  
+  getMessages( roomType: string,sessionUuid: string) {
+    return this.http.get<any[]>(
+      `${this.baseUrl}/${roomType}/mensajes?sessionUuid=${sessionUuid}`
+    );
+  }
 
   isUserOnline(roomType: ChatRoomType, participantId: number): Observable<boolean> {
     return this.http.get<boolean>(`${this.baseUrl}/${roomType}/presence?participantId=${participantId}`);

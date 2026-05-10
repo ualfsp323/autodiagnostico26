@@ -42,7 +42,12 @@ export class SeguimientoChatComponent implements OnInit, OnDestroy {
   }
   
   get participantId(): number {
-    return this.participantIdInput && this.participantIdInput > 0 ? this.participantIdInput : this.currentUserId;
+
+    if (this.participantIdInput && this.participantIdInput > 0) {
+      return this.participantIdInput;
+    }
+
+    return this.authStateService.userId() ?? 0;
   }
 
   get isMechanic(): boolean {
@@ -62,11 +67,16 @@ export class SeguimientoChatComponent implements OnInit, OnDestroy {
   }
 
   get sessionUuid(): string {
+
     const provided = this.sessionUuidInput?.trim();
+
     if (provided) {
       return provided;
     }
-    return `seguimiento-client-${this.participantId}`;
+
+    const stored = localStorage.getItem('trackingSessionUuid');
+
+    return stored ?? '';
   }
 
   constructor(
@@ -77,34 +87,68 @@ export class SeguimientoChatComponent implements OnInit, OnDestroy {
     @Inject(PLATFORM_ID) private readonly platformId: object
   ) {}
 
-  ngOnInit(): void {
-    if (!isPlatformBrowser(this.platformId) || !this.authStateService.canAccessSeguimiento()) {
-      return;
+    ngOnInit(): void {
+
+
+
+      console.log('PARTICIPANT', this.participantId);
+      console.log('SESSION UUID', this.sessionUuid);
+
+      if (!this.participantId || !this.sessionUuid) {
+        return;
+      }
+
+      this.joinChat();
     }
 
-    // Validar que tenemos un usuario logueado
-    const userId = this.currentUserId;
-    if (!userId || userId === 0) {
-      console.error('Chat: No hay usuario logueado válido. UserId:', userId);
-      this.userOnline = false;
-      return;
-    }
+joinChat(): void {
 
-    this.refreshPresence();
-    this.chatApiService.joinRoom(this.roomType, this.participantId).subscribe({
+  this.chatApiService
+    .joinRoom('SEGUIMIENTO', this.participantId!)
+    .subscribe({
+
       next: () => {
-        this.userOnline = true;
-        this.fetchMessages();
+
+        console.log('JOIN OK');
+
+        this.loadMessages();
         this.startMessageRefresh();
-        this.chatApiService.markReadByUser(this.roomType, this.sessionUuid).subscribe();
+
       },
+
       error: (err) => {
-        console.error('Error joining chat room:', err);
-        this.userOnline = false;
+        console.error(err);
       }
     });
-  }
+}
+loadMessages(): void {
 
+  this.chatApiService
+    .getMessages(
+      'SEGUIMIENTO',
+      this.sessionUuid
+    )
+    .subscribe({
+
+      next: (messages: ChatMessageResponse[]) => {
+
+        this.messages = messages.map(
+          (message) => this.toViewMessage(message)
+        );
+
+        console.log('MESSAGES', this.messages);
+
+        this.latestMessageId =
+          messages.length > 0
+            ? messages[messages.length - 1].id
+            : null;
+      },
+
+      error: (err: any) => {
+        console.error(err);
+      }
+    });
+}
   ngOnDestroy(): void {
     if (!isPlatformBrowser(this.platformId) || !this.authStateService.canAccessSeguimiento()) {
       return;
@@ -180,6 +224,7 @@ export class SeguimientoChatComponent implements OnInit, OnDestroy {
     this.chatApiService.listMessages(this.roomType, this.sessionUuid, 60, this.latestMessageId).subscribe({
       next: (messages) => {
         this.upsertMessages(messages);
+        this.cdr.detectChanges();
       }
     });
   }
@@ -206,7 +251,7 @@ export class SeguimientoChatComponent implements OnInit, OnDestroy {
           this.refreshPresence();
           this.cdr.detectChanges();
         });
-      }, 2500);
+      }, 5000);
     });
   }
 

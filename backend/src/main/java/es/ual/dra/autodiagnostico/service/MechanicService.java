@@ -21,6 +21,27 @@ public class MechanicService {
     private final TallerAssignmentRepository tallerAssignmentRepository;
     private final UserRepository userRepository;
 
+    public MechanicClientDTO getTrackingForClient(Long clientId) {
+
+        TallerAssignment assignment = tallerAssignmentRepository
+                .findFirstByClientIdAndActiveTrue(clientId)
+                .orElseThrow(() -> new IllegalArgumentException("Tracking no encontrado"));
+
+        AppUser client = userRepository.findById(clientId)
+                .orElseThrow(() -> new IllegalArgumentException("Cliente no encontrado"));
+
+        return MechanicClientDTO.builder()
+                .clientId(client.getId())
+                .clientName(client.getFullName())
+                .clientEmail(client.getEmail())
+                .clientAvatar(client.getAvatarUrl())
+                .status(assignment.getStatus())
+                .latestUpdate(assignment.getLatestUpdate())
+                .sessionUuid(assignment.getSessionUuid())
+                .tallerAssignmentId(assignment.getId())
+                .build();
+    }
+
     public List<MechanicClientDTO> getClientsForMechanic(Long mechanicId) {
         // Get all active assignments for this mechanic
         List<TallerAssignment> assignments = tallerAssignmentRepository.findByTallerIdAndActiveTrue(mechanicId);
@@ -78,4 +99,7 @@ public class MechanicService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Estado inválido: " + status);
         }
     }
+
+
+
 }

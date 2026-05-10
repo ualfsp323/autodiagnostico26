@@ -27,6 +27,16 @@ public class MechanicController {
         return ResponseEntity.ok(clients);
     }
 
+
+    @GetMapping("/client/{clientId}/tracking")
+    public ResponseEntity<MechanicClientDTO> getTrackingForClient(
+            @PathVariable Long clientId) {
+
+        return ResponseEntity.ok(
+                mechanicService.getTrackingForClient(clientId)
+        );
+    }
+
     @PostMapping("/{mechanicId}/clients/{clientId}/status")
     public ResponseEntity<Void> updateClientStatus(
             @PathVariable Long mechanicId,

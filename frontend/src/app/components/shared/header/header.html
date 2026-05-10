@@ -68,7 +68,7 @@
               <a routerLink="/perfil"         class="dropdown-item" role="menuitem">Mi perfil</a>
               <a routerLink="/mis-vehiculos"   class="dropdown-item" role="menuitem">Mis vehículos</a>
               @if (authStateService.canAccessSeguimiento()) {
-                <a routerLink="/seguimiento" class="dropdown-item" role="menuitem">Seguimiento</a>
+                <a routerLink="/usuario/seguimiento" class="dropdown-item" role="menuitem">Seguimiento</a>
               }
               <hr class="dropdown-divider"/>
               <button class="dropdown-item dropdown-item--danger"

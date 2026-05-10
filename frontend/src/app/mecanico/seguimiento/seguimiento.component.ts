@@ -26,8 +26,7 @@ export class SeguimientoComponent {
   tracking: MechanicClient | null = null;
   loading = true;
 
-  // current clientId is read from query param or default
-  clientId = 101;
+  clientId = 0;
 
   constructor() {
     const param = this.route.snapshot.queryParamMap.get('clientId') ?? this.route.snapshot.queryParamMap.get('clientid') ?? this.route.snapshot.queryParamMap.get('client');
@@ -92,48 +91,51 @@ export class SeguimientoComponent {
       }
     });
   }
+    ngOnInit(): void {
 
+      this.route.queryParamMap.subscribe(params => {
+
+        const clientId = Number(params.get('clientId'));
+
+        if (!clientId) {
+          return;
+        }
+
+        this.clientId = clientId;
+
+        this.loadTracking();
+      });
+    }
   get chatParticipantId(): number {
     return this.clientId;
   }
 
   get chatSessionUuid(): string {
-    if (this.tracking?.sessionUuid) {
-      return this.tracking.sessionUuid;
-    }
-    return `seguimiento-client-${this.clientId}`;
+    return this.tracking?.sessionUuid ?? '';
   }
 
-  private loadTracking(): void {
-    const userId = this.auth.userId();
-    if (!userId) {
-      this.loading = false;
-      return;
-    }
+ loadTracking(): void {
 
-    // Solo hacemos la llamada al MechanicService si el rol es TALLER o ADMIN
-    if (this.isMechanic) {
-      this.mechanicService.getClientsForMechanic(userId).subscribe({
-        next: (clients) => {
-          this.tracking = clients.find((c) => c.clientId === this.clientId) ?? null;
-          const initial = this.tracking?.latestUpdate;
-          this.updates = initial ? [initial] : [];
-          this.loading = false;
-          this.cdr.detectChanges();
-        },
-        error: (err) => {
-          console.error('Error cargando seguimiento:', err);
-          this.loading = false;
-          this.cdr.detectChanges();
-        }
-      });
-    } else {
-      // Lógica segura para el USUARIO NORMAL (USER)
-      // TODO: Aquí deberás llamar a tu servicio de usuario cuando lo tengas.
-      // Por ahora, lo dejamos en null para que cargue la vista sin crashear.
-      this.tracking = null; 
-      this.loading = false;
-      this.cdr.detectChanges();
-    }
-  }
+  this.loading = true;
+
+  this.mechanicService
+    .getTracking(this.clientId)
+    .subscribe({
+      next: (tracking: MechanicClient) => {
+        this.tracking = tracking;
+
+        console.log('TRACKING', tracking);
+        console.log('SESSION UUID', tracking.sessionUuid);
+
+        this.loading = false;
+      },
+
+      error: (err: any) => {
+
+        console.error(err);
+
+        this.loading = false;
+      }
+    });
+}
 }
