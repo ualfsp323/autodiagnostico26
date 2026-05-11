@@ -18,18 +18,19 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.text.similarity.LevenshteinDistance;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.apache.commons.text.similarity.LevenshteinDistance;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.List;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.ArrayList;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -193,17 +194,23 @@ public class DataPopulationService {
                     if (parts.isArray()) {
                         for (JsonNode part : parts) {
                             String partName = part.asText().trim().toLowerCase();
+                            System.out.println("Buscando pieza: " + partName + " para " + vehicleModel.getModelName());
                             Product product = findPartByName(partName);
 
                             if (product == null) {
+                                System.out.println("No se encontró la pieza, se procede a crear una dummy.");
                                 product = Product.builder()
                                         .name(partName)
                                         .build();
+                                System.out.println("Pieza creada: " + product);
                                 productRepository.save(product);
                             }
 
                             Engine eng = vehicleModel.getEngine();
                             EngineType engineType = mapStringToEngineType(fuelType, eng.getEngineType());
+
+                            System.out
+                                    .println("Para engine: " + eng.getName() + " y mapeo a EngineType: " + engineType);
 
                             if (engineType != null) {
                                 List<Product> productsToAdd = new ArrayList<>();
@@ -282,21 +289,31 @@ public class DataPopulationService {
                                     .engineType(type)
                                     .build()));
 
-                    VehicleModel vehicleModel = vehicleModelRepository.findByModelNameAndVehicle(modelName, vehicle)
-                            .orElseGet(() -> {
+                    Set<VehicleModel> vehicleModelsSet = vehicleModelRepository
+                            .findByModelNameAndVehicle(modelName, vehicle)
+                            .stream().collect(Collectors.toSet());
 
-                                VehicleModel vm = VehicleModel.builder()
-                                        .modelName(modelName)
-                                        .vehicle(vehicle)
-                                        .yearFirstProduction(Integer.valueOf(entry.get("Año").asText()))
-                                        .engine(engine)
-                                        .build();
-                                vehicleModels.add(vm);
+                    if (vehicleModelsSet.isEmpty()) {
 
-                                vm.setTransmission(inferTransmissionType(vm, computeATScore(vm)));
-                                return vehicleModelRepository.save(vm);
-                            });
-                    vehicleModels.add(vehicleModel);
+                        VehicleModel dummyVm = VehicleModel.builder()
+                                .modelName(modelName)
+                                .vehicle(vehicle)
+                                .yearFirstProduction(Integer.valueOf(entry.get("Año").asText()))
+                                .engine(engine)
+                                .build();
+                        vehicleModels.add(dummyVm);
+
+                        Set<TransmissionType> inferredTransmissionTypes = inferTransmissionType(dummyVm,
+                                computeATScore(dummyVm));
+
+                        for (TransmissionType trans : inferredTransmissionTypes) {
+                            dummyVm.setTransmission(trans);
+                            VehicleModel vm = vehicleModelRepository.save(dummyVm);
+                            vehicleModelsSet.add(vm);
+                        }
+                    }
+
+                    vehicleModels.addAll(vehicleModelsSet);
                 }
             }
         }
@@ -381,13 +398,15 @@ public class DataPopulationService {
      *                     pero no una transmisión
      * @param score        Entrada lógica para el modelo probabilístico
      *                     que infiere el tipo de transmisión
-     * @return El tipo de transmisión inferido
+     * @return Las transmisiones probables
      */
 
-    private TransmissionType inferTransmissionType(
+    private Set<TransmissionType> inferTransmissionType(
             VehicleModel vehicleModel,
             double score // renamed: this is NOT probability, it's the logit input
     ) {
+
+        Set<TransmissionType> probableTransmissions = new HashSet<>();
 
         double atProb = 1.0 / (1.0 + Math.exp(-score));
         Engine engine = vehicleModel.getEngine();
@@ -400,7 +419,8 @@ public class DataPopulationService {
 
                 // Eléctricos -> AT
                 if (engineType == EngineType.BEV) {
-                    return TransmissionType.AT;
+                    probableTransmissions.add(TransmissionType.AT);
+                    return probableTransmissions;
                 }
 
                 // Lógica coches híbridos
@@ -410,21 +430,26 @@ public class DataPopulationService {
                         switch (currentBrand) {
                             case "toyota":
                             case "lexus":
-                                return TransmissionType.eCVT;
+                                probableTransmissions.add(TransmissionType.eCVT);
                             case "honda":
-                                return TransmissionType.eCVT;
+                                probableTransmissions.add(TransmissionType.eCVT);
                             default:
-                                return TransmissionType.CVT;
+                                probableTransmissions.add(TransmissionType.CVT);
                         }
                     }
-                    return TransmissionType.CVT;
+                    probableTransmissions.add(TransmissionType.CVT);
+                    return probableTransmissions;
                 }
             }
         }
 
-        // Si es probablemente manual, devolver manual
-        if (atProb < 0.4) {
-            return TransmissionType.MT;
+        // Si es probablemente manual, añadir manual
+        if (atProb <= 0.4) {
+            probableTransmissions.add(TransmissionType.MT);
+        }
+
+        if (atProb >= 0.4) {
+            probableTransmissions.add(TransmissionType.AT);
         }
 
         // Refinar tipo de AT
@@ -439,7 +464,8 @@ public class DataPopulationService {
                 case "seat":
                 case "skoda":
                 case "cupra":
-                    return TransmissionType.DCT;
+                    probableTransmissions.add(TransmissionType.DCT);
+                    break;
 
                 // Convertidores de par premium
                 case "bmw":
@@ -447,33 +473,44 @@ public class DataPopulationService {
                 case "jaguar":
                 case "land rover":
                 case "volvo":
-                    return TransmissionType.AT;
+                    probableTransmissions.add(TransmissionType.AT);
+                    break;
 
                 // CVT predominante
                 case "nissan":
                 case "subaru":
-                    return TransmissionType.CVT;
+                    probableTransmissions.add(TransmissionType.CVT);
+                    break;
 
                 // AT predominante
                 case "mazda":
                 case "toyota":
-                    return TransmissionType.AT;
+                    probableTransmissions.add(TransmissionType.AT);
+                    break;
 
                 // DCT coreano
                 case "hyundai":
                 case "kia":
-                    return TransmissionType.DCT;
+                    probableTransmissions.add(TransmissionType.DCT);
+                    break;
 
                 default:
                     if (atProb > 0.75) {
-                        return TransmissionType.AT;
+                        probableTransmissions.add(TransmissionType.AT);
                     } else {
-                        return TransmissionType.CVT;
+                        probableTransmissions.add(TransmissionType.CVT);
                     }
+                    break;
             }
         }
 
-        return atProb > 0.5 ? TransmissionType.AT : TransmissionType.MT;
+        if (atProb > 0.5) {
+            probableTransmissions.add(TransmissionType.AT);
+        } else {
+            probableTransmissions.add(TransmissionType.MT);
+        }
+
+        return probableTransmissions;
     }
 
     private String extractModelName(JsonNode entry) {
