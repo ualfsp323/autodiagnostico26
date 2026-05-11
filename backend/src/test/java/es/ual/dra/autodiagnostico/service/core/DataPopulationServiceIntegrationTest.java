@@ -9,8 +9,10 @@ import es.ual.dra.autodiagnostico.repository.VehicleRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.Commit;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.Map;
 
 import java.io.IOException;
 import java.util.List;
@@ -20,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
+@Commit
 public class DataPopulationServiceIntegrationTest {
 
     @Autowired
@@ -40,7 +43,11 @@ public class DataPopulationServiceIntegrationTest {
         String sampleJsonPath = "src/test/resources/sample-seat.json";
         String carSampleJsonPath = "src/test/resources/carparts-vag.json";
         // When
-        dataPopulationService.populateFromFile(sampleJsonPath, carSampleJsonPath);
+        List<Map<Vehicle, List<VehicleModel>>> allVehiclesModels = dataPopulationService
+                .populateFromFile(sampleJsonPath, carSampleJsonPath);
+
+        System.out.println("\n--- ALL VEHICLES MODELS ---");
+        allVehiclesModels.forEach(m -> System.out.println("Vehicle Model: " + m));
 
         // Then
         List<Vehicle> vehicles = vehicleRepository.findAll();
