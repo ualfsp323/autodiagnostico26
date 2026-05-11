@@ -12,13 +12,13 @@ public interface ChatService {
 
     ChatJoinResponseDTO leaveRoom(String roomType, Long participantId);
 
-    List<ChatMessageResponseDTO> listMessages(String roomType, Integer limit, Long afterId);
+    List<ChatMessageResponseDTO> listMessages(String roomType, String sessionUuid, Integer limit, Long afterId);
 
     ChatMessageResponseDTO sendMessage(ChatMessageRequestDTO dto);
 
-    long unreadCount(String roomType);
+    long unreadCount(String roomType, String sessionUuid);
 
-    int markReadByUser(String roomType);
+    int markReadByUser(String roomType, String sessionUuid);
 
     boolean isUserOnline(String roomType, Long participantId);
 }

@@ -1,0 +1,219 @@
+[
+  {
+    "id": 1,
+    "name": "Mecánico 1",
+    "workshop": "Taller Norte",
+    "clients": [
+      {
+        "id": 101,
+        "name": "Ana López",
+        "car": "Toyota Corolla",
+        "problem": "Cambio de aceite",
+        "status": "verde"
+      },
+      {
+        "id": 102,
+        "name": "Ana López",
+        "car": "Hyundai i30",
+        "problem": "Revisión de batería",
+        "status": "amarillo"
+      },
+      {
+        "id": 103,
+        "name": "Luis Pérez",
+        "car": "Honda Civic",
+        "problem": "Frenos desgastados",
+        "status": "naranja"
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "name": "Mecánico 2",
+    "workshop": "Taller Centro",
+    "clients": [
+      {
+        "id": 201,
+        "name": "María Gómez",
+        "car": "Ford Focus",
+        "problem": "Neumático pinchado",
+        "status": "rojo"
+      },
+      {
+        "id": 202,
+        "name": "Carlos Ruiz",
+        "car": "Seat Ibiza",
+        "problem": "Cambio de filtro",
+        "status": "verde"
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "name": "Mecánico 3",
+    "workshop": "Taller Sur",
+    "clients": [
+      {
+        "id": 301,
+        "name": "Sofía Martín",
+        "car": "Renault Clio",
+        "problem": "Luz de motor encendida",
+        "status": "naranja"
+      },
+      {
+        "id": 302,
+        "name": "Sofía Martín",
+        "car": "Kia Sportage",
+        "problem": "Revisión de correa",
+        "status": "amarillo"
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "name": "Mecánico 4",
+    "workshop": "Taller Estación",
+    "clients": [
+      {
+        "id": 401,
+        "name": "Javier Torres",
+        "car": "Peugeot 308",
+        "problem": "Pérdida de aceite",
+        "status": "rojo"
+      },
+      {
+        "id": 402,
+        "name": "Elena Navarro",
+        "car": "Opel Astra",
+        "problem": "Alineación de ruedas",
+        "status": "verde"
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "name": "Mecánico 5",
+    "workshop": "Taller Avenida",
+    "clients": [
+      {
+        "id": 501,
+        "name": "Pedro Sánchez",
+        "car": "Volkswagen Golf",
+        "problem": "Batería agotada",
+        "status": "amarillo"
+      },
+      {
+        "id": 502,
+        "name": "Pedro Sánchez",
+        "car": "Volkswagen Polo",
+        "problem": "Revisión general",
+        "status": "verde"
+      }
+    ]
+  },
+  {
+    "id": 6,
+    "name": "Mecánico 6",
+    "workshop": "Taller Alameda",
+    "clients": [
+      {
+        "id": 601,
+        "name": "Lucía Pérez",
+        "car": "Citroën C3",
+        "problem": "Ruidos en suspensión",
+        "status": "naranja"
+      },
+      {
+        "id": 602,
+        "name": "Raúl Díaz",
+        "car": "Dacia Sandero",
+        "problem": "Cambio de pastillas",
+        "status": "amarillo"
+      }
+    ]
+  },
+  {
+    "id": 7,
+    "name": "Mecánico 7",
+    "workshop": "Taller Plaza",
+    "clients": [
+      {
+        "id": 701,
+        "name": "Marta Vega",
+        "car": "Mazda 3",
+        "problem": "Sistema eléctrico",
+        "status": "rojo"
+      },
+      {
+        "id": 702,
+        "name": "Marta Vega",
+        "car": "Mazda CX-5",
+        "problem": "Mantenimiento de 60.000 km",
+        "status": "verde"
+      }
+    ]
+  },
+  {
+    "id": 8,
+    "name": "Mecánico 8",
+    "workshop": "Taller Río",
+    "clients": [
+      {
+        "id": 801,
+        "name": "Diego Castro",
+        "car": "Nissan Qashqai",
+        "problem": "Cambio de neumáticos",
+        "status": "verde"
+      },
+      {
+        "id": 802,
+        "name": "Claudia León",
+        "car": "Skoda Octavia",
+        "problem": "Filtro de aire sucio",
+        "status": "amarillo"
+      }
+    ]
+  },
+  {
+    "id": 9,
+    "name": "Mecánico 9",
+    "workshop": "Taller Horizonte",
+    "clients": [
+      {
+        "id": 901,
+        "name": "Elena Gil",
+        "car": "BMW Serie 1",
+        "problem": "Revisión de frenos",
+        "status": "naranja"
+      },
+      {
+        "id": 902,
+        "name": "Elena Gil",
+        "car": "BMW X1",
+        "problem": "Diagnóstico de motor",
+        "status": "rojo"
+      }
+    ]
+  },
+  {
+    "id": 10,
+    "name": "Mecánico 10",
+    "workshop": "Taller Sol",
+    "clients": [
+      {
+        "id": 1001,
+        "name": "Hugo Romero",
+        "car": "Fiat 500",
+        "problem": "Batería débil",
+        "status": "verde"
+      },
+      {
+        "id": 1002,
+        "name": "Hugo Romero",
+        "car": "Fiat Tipo",
+        "problem": "Revisión de embrague",
+        "status": "amarillo"
+      }
+    ]
+  }
+]

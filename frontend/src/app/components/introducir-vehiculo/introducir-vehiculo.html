@@ -1,0 +1,56 @@
+<section class="iv-card">
+
+  <div class="iv-header">
+    <h2 class="iv-title">Información del vehículo</h2>
+    <span class="iv-subtitle">Indica al menos la marca y el modelo para enviar el diagnóstico</span>
+  </div>
+
+  <app-selector-marca-modelo
+    [brands]="brands"
+    [models]="models"
+    [loadingBrands]="loadingBrands"
+    [loadingModels]="loadingModels"
+    (brandChange)="onBrandChange($event)"
+    (modelChange)="onModelChange($event)"
+  />
+
+  <app-precision-busqueda
+    [level]="precisionLevel"
+    [label]="precisionLabel"
+  />
+
+  <div class="iv-section-header">
+    <span class="iv-section-title">¿Cuánto conoces tu coche?</span>
+    <span class="iv-section-hint">Completa lo que sepas para afinar el diagnóstico</span>
+  </div>
+
+  <app-detalle-vehiculo
+    [variants]="variants"
+    [loadingVariants]="loadingVariants"
+    [disabled]="detailDisabled"
+    [engineTypeOptions]="engineTypeOptions"
+    [transmissionOptions]="transmissionOptions"
+    (detailChange)="onDetailChange($event)"
+  />
+
+  <div class="iv-footer">
+    @if (!canSubmit) {
+      <p class="iv-submit-hint">
+        @if (!tieneProblema) {
+          Selecciona primero un problema
+        } @else {
+          Indica al menos la marca y el modelo
+        }
+      </p>
+    }
+    <button
+      type="button"
+      class="iv-submit"
+      [disabled]="!canSubmit"
+      (click)="enviar.emit()"
+    >
+      Enviar diagnóstico
+    </button>
+  </div>
+
+</section>

@@ -91,18 +91,22 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ChatMessageResponseDTO> listMessages(String roomType, Integer limit, Long afterId) {
+    public List<ChatMessageResponseDTO> listMessages(String roomType, String sessionUuid, Integer limit, Long afterId) {
         ChatRoomType parsedRoom = ChatRoomType.from(roomType);
+        String normalizedSessionUuid = normalizeSessionUuid(sessionUuid);
         int safeLimit = limit == null ? 50 : Math.max(1, Math.min(limit, MAX_FETCH_LIMIT));
 
         List<ChatMessage> result;
         if (afterId != null && afterId > 0) {
-            result = chatMessageRepository.findTop100ByRoomTypeAndIdGreaterThanOrderByIdAsc(parsedRoom, afterId)
+            result = chatMessageRepository
+                    .findTop100ByRoomTypeAndSessionUuidAndIdGreaterThanOrderByIdAsc(parsedRoom, normalizedSessionUuid,
+                            afterId)
                     .stream()
                     .limit(safeLimit)
                     .toList();
         } else {
-            List<ChatMessage> ordered = chatMessageRepository.findTop100ByRoomTypeOrderByCreatedAtDesc(parsedRoom)
+            List<ChatMessage> ordered = chatMessageRepository
+                    .findTop100ByRoomTypeAndSessionUuidOrderByCreatedAtDesc(parsedRoom, normalizedSessionUuid)
                     .stream()
                     .sorted(Comparator.comparing(ChatMessage::getCreatedAt))
                     .toList();
@@ -117,9 +121,15 @@ public class ChatServiceImpl implements ChatService {
     public ChatMessageResponseDTO sendMessage(ChatMessageRequestDTO dto) {
         ChatRoomType parsedRoom = ChatRoomType.from(dto.getRoomType());
         ChatSenderRole senderRole = ChatSenderRole.from(dto.getSenderRole());
+        String normalizedSessionUuid = normalizeSessionUuid(dto.getSessionUuid());
 
         validateParticipantId(dto.getParticipantId());
         ensureParticipantInRoom(parsedRoom, dto.getParticipantId());
+
+        if (!chatMessageRepository.existsByRoomTypeAndSessionUuid(parsedRoom, normalizedSessionUuid)
+                && senderRole != ChatSenderRole.MECANICO) {
+            throw new IllegalArgumentException("El primer mensaje de la conversacion debe enviarlo el mecanico");
+        }
 
         String normalizedComment = normalizeComment(dto.getCommentText());
         int wordCount = countWords(normalizedComment);
@@ -136,6 +146,7 @@ public class ChatServiceImpl implements ChatService {
                         .roomType(parsedRoom)
                         .participantId(dto.getParticipantId())
                         .senderRole(senderRole)
+                        .sessionUuid(normalizedSessionUuid)
                         .commentText(normalizedComment)
                         .wordCount(wordCount)
                         .readByUser(senderRole == ChatSenderRole.USUARIO)
@@ -146,15 +157,19 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     @Transactional(readOnly = true)
-    public long unreadCount(String roomType) {
+    public long unreadCount(String roomType, String sessionUuid) {
         ChatRoomType parsedRoom = ChatRoomType.from(roomType);
-        return chatMessageRepository.countByRoomTypeAndSenderRoleAndReadByUserFalse(parsedRoom, ChatSenderRole.MECANICO);
+        String normalizedSessionUuid = normalizeSessionUuid(sessionUuid);
+        return chatMessageRepository.countByRoomTypeAndSessionUuidAndSenderRoleAndReadByUserFalse(parsedRoom,
+                normalizedSessionUuid, ChatSenderRole.MECANICO);
     }
 
     @Override
-    public int markReadByUser(String roomType) {
+    public int markReadByUser(String roomType, String sessionUuid) {
         ChatRoomType parsedRoom = ChatRoomType.from(roomType);
-        return chatMessageRepository.markReadByUser(parsedRoom, ChatSenderRole.MECANICO);
+        String normalizedSessionUuid = normalizeSessionUuid(sessionUuid);
+        return chatMessageRepository.markReadByUserAndSession(parsedRoom, normalizedSessionUuid,
+                ChatSenderRole.MECANICO);
     }
 
     @Override
@@ -187,6 +202,14 @@ public class ChatServiceImpl implements ChatService {
         return value == null ? "" : value.trim();
     }
 
+    private String normalizeSessionUuid(String value) {
+        String normalized = value == null ? "" : value.trim();
+        if (normalized.isEmpty()) {
+            throw new IllegalArgumentException("El UUID de sesion es obligatorio");
+        }
+        return normalized;
+    }
+
     private int countWords(String text) {
         String trimmed = text == null ? "" : text.trim();
         if (trimmed.isEmpty()) {
@@ -200,6 +223,7 @@ public class ChatServiceImpl implements ChatService {
                 .id(message.getId())
                 .roomType(message.getRoomType().name())
                 .participantId(message.getParticipantId())
+                .sessionUuid(message.getSessionUuid())
                 .senderRole(message.getSenderRole().name())
                 .commentText(message.getCommentText())
                 .wordCount(message.getWordCount())

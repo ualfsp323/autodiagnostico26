@@ -1,0 +1,61 @@
+<div class="smm-row">
+
+  <!-- Marca -->
+  <div class="smm-field">
+    <label class="smm-label" for="smm-brand">Marca</label>
+    <div class="smm-select-wrap" [class.smm-loading]="loadingBrands">
+      <svg class="smm-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path d="M9 6a3 3 0 1 1 6 0 3 3 0 0 1-6 0ZM2 10a5 5 0 0 1 10 0H2Zm10 0a5 5 0 0 1 10 0H12Z"/>
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M2.5 17a7.5 7.5 0 0 1 15 0H2.5Z"/>
+      </svg>
+      <select id="smm-brand" class="smm-select"
+              [value]="selectedBrand ?? ''"
+              (change)="onBrandChange($any($event.target).value)">
+        <option value="" disabled [selected]="!selectedBrand">
+          {{ loadingBrands ? 'Cargando…' : 'Selecciona marca' }}
+        </option>
+        @for (brand of brands; track brand) {
+          <option [value]="brand">{{ brand }}</option>
+        }
+        @if (!loadingBrands && brands.length === 0) {
+          <option disabled>Sin datos en BD</option>
+        }
+      </select>
+      <svg class="smm-chevron" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fill-rule="evenodd" clip-rule="evenodd"
+              d="M5.293 7.293a1 1 0 0 1 1.414 0L10 10.586l3.293-3.293a1 1 0 1 1 1.414 1.414l-4 4a1 1 0 0 1-1.414 0l-4-4a1 1 0 0 1 0-1.414Z"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Modelo -->
+  <div class="smm-field">
+    <label class="smm-label" for="smm-model"
+           [class.smm-label-muted]="modelsDisabled">Modelo</label>
+    <div class="smm-select-wrap"
+         [class.smm-loading]="loadingModels"
+         [class.smm-disabled]="modelsDisabled">
+      <svg class="smm-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99ZM6.85 7h10.29l1.08 3.11H5.77L6.85 7ZM19 17H5v-5h14v5Z"/>
+        <circle cx="7.5" cy="14.5" r="1.5"/>
+        <circle cx="16.5" cy="14.5" r="1.5"/>
+      </svg>
+      <select id="smm-model" class="smm-select"
+              [disabled]="modelsDisabled"
+              [value]="selectedModelId ?? ''"
+              (change)="onModelChange($any($event.target).value)">
+        <option value="" disabled [selected]="!selectedModelId">
+          {{ loadingModels ? 'Cargando…' : (modelsDisabled ? 'Elige marca primero' : 'Selecciona modelo') }}
+        </option>
+        @for (model of models; track model.id) {
+          <option [value]="model.id">{{ model.name }}</option>
+        }
+      </select>
+      <svg class="smm-chevron" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fill-rule="evenodd" clip-rule="evenodd"
+              d="M5.293 7.293a1 1 0 0 1 1.414 0L10 10.586l3.293-3.293a1 1 0 1 1 1.414 1.414l-4 4a1 1 0 0 1-1.414 0l-4-4a1 1 0 0 1 0-1.414Z"/>
+      </svg>
+    </div>
+  </div>
+
+</div>

@@ -21,12 +21,13 @@ export class LoginComponent implements OnInit {
 
   mode: 'login' | 'register' = 'login';
   fullName = '';
-  email = '';
-  password = '';
+  email = 'admin'; // TODO: TEMPORAL - Quitar cuando se conecte al backend
+  password = 'admin'; // TODO: TEMPORAL - Quitar cuando se conecte al backend
   confirmPassword = '';
   selectedRole: AuthUserRole = 'USER';
   keepSession = true;
   errorMessage = '';
+  emailFieldError = '';
   isSubmitting = false;
 
   readonly roleCards = [
@@ -54,6 +55,7 @@ export class LoginComponent implements OnInit {
   switchMode(nextMode: 'login' | 'register'): void {
     this.mode = nextMode;
     this.errorMessage = '';
+    this.emailFieldError = '';
     void this.router.navigate([nextMode === 'login' ? '/login' : '/registro']);
   }
 
@@ -85,6 +87,7 @@ export class LoginComponent implements OnInit {
     this.isSubmitting = true;
     this.errorMessage = '';
 
+
     this.authApiService.login({ email, password: this.password }).subscribe({
       next: (user) => this.completeSession(user),
       error: (error) => {
@@ -107,6 +110,7 @@ export class LoginComponent implements OnInit {
 
     if (!email) {
       this.errorMessage = 'Escribe tu correo para crear la cuenta.';
+      this.emailFieldError = '';
       return;
     }
 
@@ -127,17 +131,25 @@ export class LoginComponent implements OnInit {
 
     this.isSubmitting = true;
     this.errorMessage = '';
+    this.emailFieldError = '';
 
     this.authApiService.register({ fullName, email, password, role: this.selectedRole }).subscribe({
       next: (user) => this.completeSession(user),
       error: (error) => {
         this.isSubmitting = false;
+        if (this.isConflictError(error)) {
+          this.emailFieldError = 'Ya existe una cuenta con ese correo. Usa otro email para registrarte.';
+          this.errorMessage = '';
+          return;
+        }
+
+        this.emailFieldError = '';
         this.errorMessage = this.extractErrorMessage(error, 'No se pudo crear la cuenta.');
       }
     });
   }
 
-  private completeSession(user: AuthUserResponse): void {
+private completeSession(user: AuthUserResponse): void {
     this.authStateService.applyAuthenticatedUser({
       id: user.id,
       fullName: user.fullName,
@@ -147,10 +159,18 @@ export class LoginComponent implements OnInit {
     });
 
     this.isSubmitting = false;
-    const redirectToSeguimiento = this.mode === 'register' || user.role === 'ADMIN';
-    void this.router.navigate([redirectToSeguimiento ? '/seguimiento' : '/home']);
-  }
+    
+    // Si es Taller o Admin, lo enviamos a su dashboard de mecánico
+    if (user.role === 'TALLER' || user.role === 'ADMIN') {
+      void this.router.navigate(['/mecanico']);
+      return;
+    }
 
+    // Si es un Usuario Normal, corregimos la ruta a '/usuario/seguimiento'
+    const redirectToSeguimiento = this.mode === 'register';
+    void this.router.navigate([redirectToSeguimiento ? '/usuario/seguimiento' : '/home']);
+  }
+  
   private extractErrorMessage(error: unknown, fallbackMessage: string): string {
     if (typeof error === 'object' && error !== null && 'error' in error) {
       const responseError = error as { error?: { message?: string } | string };
@@ -163,5 +183,9 @@ export class LoginComponent implements OnInit {
     }
 
     return fallbackMessage;
+  }
+
+  private isConflictError(error: unknown): boolean {
+    return typeof error === 'object' && error !== null && 'status' in error && (error as { status?: number }).status === 409;
   }
 }

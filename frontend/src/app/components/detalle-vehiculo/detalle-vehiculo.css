@@ -1,0 +1,124 @@
+:host {
+  --accent:       #1a6bbd;
+  --accent-light: rgba(26, 107, 189, 0.10);
+  --bg:           #f8fafc;
+  --bg-card:      #ffffff;
+  --ink:          #111827;
+  --ink-faint:    #9ca3af;
+  --ink-muted:    #6b7280;
+  --border-input: #e5e7eb;
+  --radius:       8px;
+  --font:         'Exo 2', sans-serif;
+  --transition:   180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dv-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 860px) {
+  .dv-row { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 520px) {
+  .dv-row { grid-template-columns: 1fr; }
+}
+
+.dv-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dv-label {
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  transition: color var(--transition);
+}
+
+.dv-label-muted { color: var(--ink-faint); }
+
+.dv-select-wrap,
+.dv-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius);
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.dv-select-wrap:focus-within,
+.dv-input-wrap:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+.dv-icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin-left: 10px;
+  color: var(--ink-muted);
+  pointer-events: none;
+}
+
+.dv-chevron {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin-right: 10px;
+  color: var(--accent);
+  pointer-events: none;
+}
+
+.dv-select {
+  flex: 1;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 9px 6px 9px 8px;
+  font-family: var(--font);
+  font-size: 14px;
+  color: var(--ink);
+  cursor: pointer;
+  min-width: 0;
+}
+
+.dv-select option[disabled] { color: var(--ink-faint); }
+
+.dv-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 9px 8px;
+  font-family: var(--font);
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.dv-input::placeholder { color: var(--ink-faint); }
+
+.dv-input[type='number']::-webkit-inner-spin-button,
+.dv-input[type='number']::-webkit-outer-spin-button { opacity: 0.4; }
+
+.dv-disabled {
+  background: var(--bg);
+  opacity: 0.65;
+}
+
+.dv-disabled .dv-select { cursor: not-allowed; }
+
+.dv-loading .dv-chevron {
+  animation: dv-spin 0.8s linear infinite;
+}
+
+@keyframes dv-spin { to { transform: rotate(360deg); } }

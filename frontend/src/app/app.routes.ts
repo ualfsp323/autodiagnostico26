@@ -12,15 +12,17 @@ import { PerfilComponent } from './components/perfil/perfil';
 import { MisVehiculosComponent } from './components/mis-vehiculos/mis-vehiculos';
 import { LoginComponent } from './components/login/login';
 import { seguimientoGuard } from './auth/seguimiento.guard';
+import { authGuard } from './auth/auth.guard';
 
 export const routes: Routes = [
-	{ path: '', pathMatch: 'full', redirectTo: 'home' },
+	{ path: '', pathMatch: 'full', redirectTo: 'login' },
 	{ path: 'home', component: HomeComponent },
 	{ path: 'diagnostico', component: DiagnosticoComponent },
 	{ path: 'taller', component: TallerComponent },
 	{ path: 'repuestos', component: RepuestosComponent },
+	{ path: 'mecanico', loadComponent: () => import('./mecanico/mecanico.component').then((m) => m.MecanicoComponent) },
 	{
-		path: 'seguimiento',
+		path: 'usuario/seguimiento',
 		component: SeguimientoComponent,
 		canActivate: [seguimientoGuard],
 		children: [
@@ -29,11 +31,15 @@ export const routes: Routes = [
 		]
 	},
 	{ path: 'presupuesto', component: PresupuestoComponent },
+	{ path: 'mecanico/seguimiento', loadComponent: () => import('./mecanico/seguimiento/seguimiento.component').then((m) => m.SeguimientoComponent), canActivate: [seguimientoGuard], children: [
+		{ path: '', pathMatch: 'full', redirectTo: 'chat' },
+		{ path: 'chat', loadComponent: () => import('./components/seguimiento/chat/chat').then((m) => m.SeguimientoChatComponent) }
+	] },
 	{ path: 'historial', component: HistorialComponent },
 	{ path: 'contacto', component: ContactoComponent },
 	{ path: 'perfil', component: PerfilComponent },
 	{ path: 'mis-vehiculos', component: MisVehiculosComponent },
 	{ path: 'login', component: LoginComponent },
 	{ path: 'registro', component: LoginComponent },
-	{ path: '**', redirectTo: 'home' }
+	{ path: '**', redirectTo: 'login' }
 ];

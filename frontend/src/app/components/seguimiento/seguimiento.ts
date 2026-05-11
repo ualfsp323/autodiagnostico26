@@ -1,9 +1,10 @@
 import { isPlatformBrowser } from '@angular/common';
-import { Component, Inject, OnInit, PLATFORM_ID } from '@angular/core';
+import { Component, inject, Inject, OnInit, PLATFORM_ID } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { ChatApiService } from '../../services/chat-api.service';
 import { ChatRoomType } from '../../services/api.models';
 import { AuthStateService } from '../../services/auth-state.service';
+import { MechanicService } from '../../services/mechanic.service';
 
 @Component({
   selector: 'app-seguimiento-page',
@@ -11,11 +12,15 @@ import { AuthStateService } from '../../services/auth-state.service';
   imports: [RouterOutlet, RouterLink, RouterLinkActive],
   templateUrl: './seguimiento.html',
   styleUrl: './seguimiento.css'
-})
-export class SeguimientoComponent implements OnInit {
-  private readonly roomType: ChatRoomType = 'SEGUIMIENTO';
-  private readonly participantId = 1;
+})  
 
+export class SeguimientoComponent implements OnInit {
+  private readonly mechanicService = inject(MechanicService);
+  private readonly roomType: ChatRoomType = 'SEGUIMIENTO';
+  participantId = 0;
+  sessionUuid = '';
+  tracking: any = null;
+  hasTracking = false;
   userOnline = false;
   unreadCount = 0;
 
@@ -24,22 +29,71 @@ export class SeguimientoComponent implements OnInit {
     private readonly authStateService: AuthStateService,
     @Inject(PLATFORM_ID) private readonly platformId: object
   ) {}
-
   ngOnInit(): void {
-    if (!isPlatformBrowser(this.platformId) || !this.authStateService.canAccessSeguimiento()) {
+
+    if (!isPlatformBrowser(this.platformId)
+      || !this.authStateService.canAccessSeguimiento()) {
       return;
     }
 
-    this.chatApiService.isUserOnline(this.roomType, this.participantId).subscribe({
+    const userId = this.authStateService.userId();
+
+    if (!userId) {
+      return;
+    }
+
+    this.participantId = userId;
+
+    this.loadTracking();
+  }
+loadTracking(): void {
+
+  this.mechanicService
+    .getTrackingForClient(this.participantId)
+    .subscribe({
+
+      next: (tracking) => {
+
+        this.hasTracking = true;
+        this.tracking = tracking;
+
+        this.sessionUuid = tracking.sessionUuid ?? '';
+        localStorage.setItem(
+          'trackingSessionUuid',
+          this.sessionUuid
+         );
+
+        console.log('USER TRACKING', tracking);
+        console.log('USER UUID', this.sessionUuid);
+
+        this.loadChatData();
+      },
+
+      error: (err) => {
+        if (err.status !== 404) {
+          console.error(err);
+        }        
+        this.hasTracking = false;
+      }
+    });
+}
+loadChatData(): void {
+
+  this.chatApiService
+    .isUserOnline(this.roomType, this.participantId)
+    .subscribe({
       next: (isOnline) => {
         this.userOnline = isOnline;
       }
     });
 
-    this.chatApiService.unreadCount(this.roomType).subscribe({
+  this.chatApiService
+    .unreadCount(this.roomType, this.sessionUuid)
+    .subscribe({
       next: (count) => {
         this.unreadCount = count;
       }
     });
-  }
+}
+
 }

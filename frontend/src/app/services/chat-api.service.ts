@@ -18,8 +18,8 @@ export class ChatApiService {
     return this.http.post<ChatJoinResponse>(`${this.baseUrl}/${roomType}/leave?participantId=${participantId}`, {});
   }
 
-  listMessages(roomType: ChatRoomType, limit = 60, afterId?: number): Observable<ChatMessageResponse[]> {
-    let url = `${this.baseUrl}/${roomType}/mensajes?limit=${limit}`;
+  listMessages(roomType: ChatRoomType, sessionUuid: string, limit = 60, afterId?: number): Observable<ChatMessageResponse[]> {
+    let url = `${this.baseUrl}/${roomType}/mensajes?sessionUuid=${encodeURIComponent(sessionUuid)}&limit=${limit}`;
     if (typeof afterId === 'number' && afterId > 0) {
       url += `&afterId=${afterId}`;
     }
@@ -30,12 +30,18 @@ export class ChatApiService {
     return this.http.post<ChatMessageResponse>(`${this.baseUrl}/mensajes`, payload);
   }
 
-  unreadCount(roomType: ChatRoomType): Observable<number> {
-    return this.http.get<number>(`${this.baseUrl}/${roomType}/unread`);
+  unreadCount(roomType: ChatRoomType, sessionUuid: string): Observable<number> {
+    return this.http.get<number>(`${this.baseUrl}/${roomType}/unread?sessionUuid=${encodeURIComponent(sessionUuid)}`);
   }
 
-  markReadByUser(roomType: ChatRoomType): Observable<number> {
-    return this.http.post<number>(`${this.baseUrl}/${roomType}/mark-read`, {});
+  markReadByUser(roomType: ChatRoomType, sessionUuid: string): Observable<number> {
+    return this.http.post<number>(`${this.baseUrl}/${roomType}/mark-read?sessionUuid=${encodeURIComponent(sessionUuid)}`, {});
+  }
+  
+  getMessages( roomType: string,sessionUuid: string) {
+    return this.http.get<any[]>(
+      `${this.baseUrl}/${roomType}/mensajes?sessionUuid=${sessionUuid}`
+    );
   }
 
   isUserOnline(roomType: ChatRoomType, participantId: number): Observable<boolean> {

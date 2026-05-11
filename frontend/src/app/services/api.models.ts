@@ -35,6 +35,7 @@ export interface ChatMessageRequest {
   participantId: number;
   roomType: ChatRoomType;
   senderRole: ChatSenderRole;
+  sessionUuid: string;
   commentText: string;
 }
 
@@ -42,9 +43,39 @@ export interface ChatMessageResponse {
   id: number;
   roomType: ChatRoomType;
   participantId: number;
+  sessionUuid: string;
   senderRole: ChatSenderRole;
   commentText: string;
   wordCount: number;
   readByUser: boolean;
   createdAt: string;
+}
+
+// ── Vehículos ──────────────────────────────────────────────────────────────
+
+export type EngineType = 'PETROL' | 'DIESEL' | 'BEV' | 'HEV' | 'PHEV' | 'REEV';
+export type TransmissionType = 'MT' | 'AT' | 'CVT' | 'iMT' | 'DCT' | 'eCVT' | 'DSG';
+
+export interface VehicleModelSummary {
+  id: number;
+  name: string;
+}
+
+export interface VehicleVariant {
+  id: number;
+  modelName: string;
+  transmission: TransmissionType | null;
+  engineName: string | null;
+  engineType: EngineType | null;
+}
+
+export interface VehicleSearchContext {
+  brand: string | null;
+  modelId: number | null;
+  modelName: string | null;
+  variantId: number | null;
+  variantName: string | null;
+  engineType: EngineType | null;
+  transmission: TransmissionType | null;
+  year: number | null;
 }
