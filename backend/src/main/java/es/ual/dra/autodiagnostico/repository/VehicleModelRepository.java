@@ -15,7 +15,7 @@ public interface VehicleModelRepository extends JpaRepository<VehicleModel, Long
     Optional<VehicleModel> findByModelNameAndVehicle(String modelName, Vehicle vehicle);
 
     default void updateProducts(VehicleModel vehicleModel, List<Product> products) {
-        vehicleModel.setProducts(products);
+        vehicleModel.getProducts().addAll(products);
         save(vehicleModel);
     }
 }

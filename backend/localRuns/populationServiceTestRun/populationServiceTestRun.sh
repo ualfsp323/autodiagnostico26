@@ -63,7 +63,7 @@ echo "Running Maven tests in Docker..."
 sudo docker rm -f "$MAVEN_CONTAINER" >/dev/null 2>&1 || true
 
 # Run Maven container on the same network
-sudo docker run --name "$MAVEN_CONTAINER" --rm \
+(sudo docker run --name "$MAVEN_CONTAINER" --rm \
     --network "$DOCKER_NETWORK" \
     -v "$BACKEND_DIR":/usr/src/mymaven \
     -w /usr/src/mymaven \
@@ -71,4 +71,4 @@ sudo docker run --name "$MAVEN_CONTAINER" --rm \
     mvn clean test -Dtest=DataPopulationServiceIntegrationTest \
     -Dspring.datasource.url="jdbc:mysql://$MYSQL_CONTAINER:$MYSQL_PORT/$MYSQL_DB?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true" \
     -Dspring.datasource.username=root \
-    -Dspring.datasource.password="$MYSQL_ROOT_PASSWORD"
+    -Dspring.datasource.password="$MYSQL_ROOT_PASSWORD") > mavenLog.txt

@@ -91,7 +91,7 @@ public class DataPopulationService {
         log.info("Processing file: {}", fileName);
     }
 
-    public void populateFromFile(String filePathStr, String carPartsGroupPathStr) {
+    public List<Map<Vehicle, List<VehicleModel>>> populateFromFile(String filePathStr, String carPartsGroupPathStr) {
         List<Map<Vehicle, List<VehicleModel>>> allVehiclesModels = new ArrayList<>();
         try {
             Path carPartsGroupPath = Paths.get(carPartsGroupPathStr);
@@ -109,8 +109,10 @@ public class DataPopulationService {
                     allVehiclesModels.add(mapOfVehicleAndModels);
                 }
             }
+            return allVehiclesModels;
         } catch (IOException e) {
             log.error("Error reading file {}: {}", filePathStr, e.getMessage());
+            return null;
         }
     }
 
@@ -207,6 +209,7 @@ public class DataPopulationService {
                             }
 
                             Engine eng = vehicleModel.getEngine();
+                            System.out.println("Antes de llamar al mapeo al enum, fuelType es: " + fuelType);
                             EngineType engineType = mapStringToEngineType(fuelType, eng.getEngineType());
 
                             System.out
