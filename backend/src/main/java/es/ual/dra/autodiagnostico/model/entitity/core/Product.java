@@ -16,6 +16,7 @@ import jakarta.persistence.ManyToMany;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.FetchType;
+import es.ual.dra.autodiagnostico.model.entitity.core.VehicleModel;
 
 /**
  * Entidad que representa un producto asociado a un vehículo.
@@ -24,7 +25,7 @@ import jakarta.persistence.FetchType;
 @Table(name = "product")
 @Getter
 @Setter
-@ToString(exclude = "vehicles")
+@ToString(exclude = "vehicleModels")
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -45,8 +46,8 @@ public class Product {
 
     private String image; // Puede ser nulo
 
-    // Vehículo al que pertenece el producto
+    // VehicleModels a los que está asociado este producto
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "vm_has_product", joinColumns = @JoinColumn(name = "idProduct"), inverseJoinColumns = @JoinColumn(name = "idVehicleModel"))
-    private List<Vehicle> vehicles;
+    private List<VehicleModel> vehicleModels;
 }

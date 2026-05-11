@@ -38,6 +38,8 @@ public class DataPopulationService {
     private final EngineRepository engineRepository;
     private final ProductRepository productRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    // Cache del JSON de piezas generales
+    private JsonNode generalPartsRoot = null;
 
     // Contiene la marca actual siendo procesada SIN el prefijo "ultimatespecs-" ni
     // otras palabras. Además, está en minúsculas.
@@ -111,6 +113,16 @@ public class DataPopulationService {
     private void processCarPartsForVehicleModel(Path carPartsGroupPath, VehicleModel vehicleModel) {
         try {
             JsonNode carPartRoot = objectMapper.readTree(new File(carPartsGroupPath.toAbsolutePath().toString()));
+            // Cargar el JSON de piezas generales si no está en memoria
+            if (generalPartsRoot == null) {
+                try {
+                    generalPartsRoot = objectMapper
+                            .readTree(getClass().getClassLoader().getResourceAsStream("general-car-parts.json"));
+                } catch (Exception e) {
+                    log.warn("No se pudo leer general-car-parts.json: {}", e.getMessage());
+                    generalPartsRoot = null;
+                }
+            }
             if (carPartRoot.isArray()) {
                 for (JsonNode node : carPartRoot) {
                     String platformGen = node.get("plataforma_generacion").asText();
@@ -118,8 +130,105 @@ public class DataPopulationService {
                     JsonNode parts = node.get("piezas");
                     if (parts.isArray()) {
                         for (JsonNode part : parts) {
-                            // TODO: Guardar pieza
-                            // productRepository.findB
+                            String partName = null;
+                            if (part.isTextual()) {
+                                partName = part.asText();
+                            } else if (part.has("name")) {
+                                partName = part.get("name").asText();
+                            } else if (part.has("pieza")) {
+                                partName = part.get("pieza").asText();
+                            }
+
+                            if (partName == null || partName.isBlank())
+                                continue;
+
+                            // Buscar en el JSON general una pieza que coincida
+                            JsonNode matched = null;
+                            if (generalPartsRoot != null && generalPartsRoot.isArray()) {
+                                String pn = partName.toLowerCase();
+                                for (JsonNode g : generalPartsRoot) {
+                                    if (g.has("name")) {
+                                        String gname = g.get("name").asText().toLowerCase();
+                                        if (gname.equals(pn) || gname.contains(pn)
+                                                || pn.contains(gname.split("\\s")[0])) {
+                                            matched = g;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+
+                            String description = null;
+                            Double price = null;
+                            String image = null;
+
+                            if (matched != null) {
+                                if (matched.has("description"))
+                                    description = matched.get("description").asText();
+                                if (matched.has("image"))
+                                    image = matched.get("image").asText();
+                                if (matched.has("priceRange")) {
+                                    String pr = matched.get("priceRange").asText();
+                                    // Extraer números del rango, p. ej. "1500-10000€"
+                                    try {
+                                        String cleaned = pr.replaceAll("[^0-9\\-]", "");
+                                        if (cleaned.contains("-")) {
+                                            String[] partsRange = cleaned.split("-", 2);
+                                            double min = Double.parseDouble(partsRange[0]);
+                                            double max = Double.parseDouble(partsRange[1]);
+                                            price = (min + max) / 2.0; // tomar punto medio
+                                        } else {
+                                            price = Double.parseDouble(cleaned);
+                                        }
+                                    } catch (Exception ex) {
+                                        // ignore parse errors
+                                        log.debug("No se pudo parsear priceRange '{}' para '{}'", pr, partName);
+                                    }
+                                }
+                            }
+
+                            // Guardar o actualizar producto
+                            String canonicalName = partName.trim();
+                            es.ual.dra.autodiagnostico.model.entitity.core.Product product = productRepository
+                                    .findByName(canonicalName).orElse(null);
+                            if (product == null) {
+                                product = es.ual.dra.autodiagnostico.model.entitity.core.Product.builder()
+                                        .name(canonicalName)
+                                        .description(description)
+                                        .price(price)
+                                        .image(image)
+                                        .build();
+                            } else {
+                                // actualizar descripción/price si no existen
+                                if ((product.getDescription() == null || product.getDescription().isBlank())
+                                        && description != null)
+                                    product.setDescription(description);
+                                if (product.getPrice() == null && price != null)
+                                    product.setPrice(price);
+                                if ((product.getImage() == null || product.getImage().isBlank()) && image != null)
+                                    product.setImage(image);
+                            }
+
+                            // Asociar vehicleModel
+                            try {
+                                if (product.getVehicleModels() == null)
+                                    product.setVehicleModels(new ArrayList<>());
+                                // evitar duplicados
+                                boolean exists = false;
+                                for (VehicleModel vm : product.getVehicleModels()) {
+                                    if (vm.getIdVehicleModel() != null
+                                            && vm.getIdVehicleModel().equals(vehicleModel.getIdVehicleModel())) {
+                                        exists = true;
+                                        break;
+                                    }
+                                }
+                                if (!exists)
+                                    product.getVehicleModels().add(vehicleModel);
+                            } catch (Exception ex) {
+                                log.debug("No se pudo asociar product->vehicleModel: {}", ex.getMessage());
+                            }
+
+                            productRepository.save(product);
                         }
                     }
                 }
