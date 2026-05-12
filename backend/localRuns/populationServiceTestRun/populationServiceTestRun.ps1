@@ -87,10 +87,11 @@ docker rm -f $MAVEN_CONTAINER -ErrorAction SilentlyContinue | Out-Null
 # Run Maven container on the network
 docker run --name $MAVEN_CONTAINER --rm `
     --network $DOCKER_NETWORK `
-    -v "$BACKEND_DIR`:/usr/src/mymaven" `
+    -v "$BACKEND_DIR:/usr/src/mymaven" `
     -w /usr/src/mymaven `
     maven:3.9.15-eclipse-temurin-21 `
     mvn clean test -Dtest=DataPopulationServiceIntegrationTest `
-    -Dspring.datasource.url="jdbc:mysql://$MYSQL_CONTAINER:$MYSQL_PORT/$MYSQL_DB?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true" `
+    -Dspring.datasource.url="jdbc:mysql://$MYSQL_CONTAINER`:$MYSQL_PORT/$MYSQL_DB?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true" `
     -Dspring.datasource.username=root `
-    -Dspring.datasource.password="$MYSQL_ROOT_PASSWORD"
+    -Dspring.datasource.password="$MYSQL_ROOT_PASSWORD" `
+    2>&1 | Tee-Object -FilePath "mavenLog.txt"

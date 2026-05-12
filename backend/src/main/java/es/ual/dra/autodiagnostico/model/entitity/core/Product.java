@@ -11,12 +11,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+
+import java.util.ArrayList;
 import java.util.List;
 import jakarta.persistence.ManyToMany;
-import jakarta.persistence.JoinTable;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.FetchType;
-import es.ual.dra.autodiagnostico.model.entitity.core.VehicleModel;
 
 /**
  * Entidad que representa un producto asociado a un vehículo.
@@ -42,12 +40,13 @@ public class Product {
     private String description;
 
     // Precio del producto
-    private Double price; // Puede ser nulo
+    private Double lowRangePrice; // Puede ser nulo
+
+    private Double highRangePrice; // Puede ser nulo
 
     private String image; // Puede ser nulo
 
-    // VehicleModels a los que está asociado este producto
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(name = "vm_has_product", joinColumns = @JoinColumn(name = "idProduct"), inverseJoinColumns = @JoinColumn(name = "idVehicleModel"))
-    private List<VehicleModel> vehicleModels;
+    @ManyToMany(mappedBy = "products")
+    @Builder.Default
+    private List<VehicleModel> vehicleModels = new ArrayList<>();
 }
