@@ -2,467 +2,558 @@ package es.ual.dra.autodiagnostico.service.core;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import es.ual.dra.autodiagnostico.model.entitity.core.Engine;
-import es.ual.dra.autodiagnostico.model.entitity.core.EngineType;
-import es.ual.dra.autodiagnostico.model.entitity.core.Product;
-import es.ual.dra.autodiagnostico.model.entitity.core.TransmissionType;
-import es.ual.dra.autodiagnostico.model.entitity.core.Vehicle;
-import es.ual.dra.autodiagnostico.model.entitity.core.VehicleModel;
-import es.ual.dra.autodiagnostico.repository.EngineRepository;
-import es.ual.dra.autodiagnostico.repository.ProductRepository;
-import es.ual.dra.autodiagnostico.repository.VehicleModelRepository;
-import es.ual.dra.autodiagnostico.repository.VehicleRepository;
+
+import es.ual.dra.autodiagnostico.model.entitity.core.*;
+import es.ual.dra.autodiagnostico.repository.*;
+
+import jakarta.annotation.PostConstruct;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.apache.commons.text.similarity.LevenshteinDistance;
+
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
-import java.util.List;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.ArrayList;
-import java.util.stream.Collectors;
-import java.nio.file.Files;
-import java.util.stream.Stream;
 
-import org.springframework.boot.ApplicationArguments;
-import org.springframework.boot.ApplicationRunner;
+import java.nio.file.*;
+
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
 @Slf4j
-public class CarDataPopulationService implements ApplicationRunner {
+public class CarDataPopulationService {
 
     private final VehicleRepository vehicleRepository;
     private final VehicleModelRepository vehicleModelRepository;
     private final EngineRepository engineRepository;
     private final ProductRepository productRepository;
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
-    // Contiene la marca actual siendo procesada SIN el prefijo "ultimatespecs-" ni
-    // otras palabras. Además, está en minúsculas.
-    private static String currentBrand;
-    private static String currentCarGroup;
-    private static String generalPartsJSONPath = "src/main/resources/general-car-parts.json";
+    private final ObjectMapper objectMapper;
 
-    @Override
-    @Transactional
-    public void run(ApplicationArguments args) throws Exception {
+    private static final String GENERAL_PARTS_JSON = "src/main/resources/general-car-parts.json";
+
+    /**
+     * Cache de productos generales.
+     */
+    private final Map<String, ProductTemplate> productCache = new ConcurrentHashMap<>();
+
+    /**
+     * Limita presión sobre DB.
+     */
+    private final Semaphore dbSemaphore = new Semaphore(16);
+
+    /**
+     * Distancia fuzzy reutilizable.
+     */
+    private final LevenshteinDistance levenshtein = LevenshteinDistance.getDefaultInstance();
+
+    /**
+     * DTO interno inmutable.
+     */
+    private record ProductTemplate(
+            String name,
+            String description,
+            double lowRangePrice,
+            double highRangePrice,
+            String image) {
+    }
+
+    /**
+     * Contexto inmutable por archivo.
+     */
+    private record ProcessingContext(
+            String brand,
+            String group,
+            Path modelFile,
+            Path carPartsFile) {
+    }
+
+    @PostConstruct
+    void preloadParts() throws IOException {
+
+        JsonNode root = objectMapper.readTree(
+                new File(GENERAL_PARTS_JSON));
+
+        for (JsonNode node : root) {
+
+            String normalized = normalize(node.get("name").asText());
+
+            String priceRangeStr = node.get("priceRange")
+                    .asText()
+                    .replace("€", "")
+                    .replace(" ", "");
+
+            String[] ranges = priceRangeStr.split("-");
+
+            JsonNode nameNode = node.get("name");
+            JsonNode descNode = node.get("description");
+            JsonNode imageNode = node.get("image");
+
+            String productName = nameNode != null ? nameNode.asText() : null;
+            String desc = descNode != null ? descNode.asText() : null;
+            String image = imageNode != null ? imageNode.asText() : null;
+
+            System.out.println(productName + " | " + desc + " | " + ranges[0] + " | " + ranges[1] + " | " + image);
+
+            ProductTemplate template = new ProductTemplate(
+                    productName,
+                    desc,
+                    Double.parseDouble(ranges[0]),
+                    Double.parseDouble(ranges[1]),
+                    image);
+
+            productCache.put(normalized, template);
+        }
+
+        log.info("Loaded {} products into cache",
+                productCache.size());
+    }
+
+    public void scanAndPopulate(String rootPath)
+            throws Exception {
+
+        List<ProcessingContext> jobs = buildJobs(rootPath);
+
+        log.info("Discovered {} jobs", jobs.size());
+
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+
+            List<Future<Object>> futures = jobs.stream()
+                    .map(job -> executor.submit(() -> {
+                        processJob(job);
+                        return null;
+                    }))
+                    .toList();
+
+            for (Future<?> future : futures) {
+                future.get();
+            }
+        }
+
+        log.info("Population completed");
+    }
+
+    private List<ProcessingContext> buildJobs(String rootPath)
+            throws IOException {
+
+        List<ProcessingContext> jobs = new ArrayList<>();
+
+        List<Path> allJsonFiles;
+
+        try (Stream<Path> stream = Files.walk(Paths.get(rootPath))) {
+
+            allJsonFiles = stream
+                    .filter(Files::isRegularFile)
+                    .filter(p -> p.toString().endsWith(".json"))
+                    .toList();
+        }
+
+        List<Path> modelFiles = allJsonFiles.stream()
+                .filter(p -> p.getFileName()
+                        .toString()
+                        .startsWith("ultimatespecs-"))
+                .toList();
+
+        for (Path modelFile : modelFiles) {
+
+            String brand = extractBrand(modelFile);
+
+            String group = modelFile.getParent()
+                    .getFileName()
+                    .toString()
+                    .toLowerCase();
+
+            Path carPartsFile = allJsonFiles.stream()
+                    .filter(p -> p.getParent()
+                            .getFileName()
+                            .toString()
+                            .equalsIgnoreCase(group))
+                    .findFirst()
+                    .orElse(null);
+
+            if (carPartsFile == null) {
+                continue;
+            }
+
+            jobs.add(
+                    new ProcessingContext(
+                            brand,
+                            group,
+                            modelFile,
+                            carPartsFile));
+        }
+
+        return jobs;
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void processJob(ProcessingContext ctx) {
+
         try {
-            long vehicleModelCount = vehicleModelRepository.count();
-            long vehicleCount = vehicleRepository.count();
-            long engineCount = engineRepository.count();
-            long productCount = productRepository.count();
-            long count = vehicleModelCount + vehicleCount + engineCount + productCount;
 
-            if (count > 0) {
-                log.info("Vehicle model already exists (count={}), skipping vehicle models initialization", count);
+            log.info("Processing brand {}", ctx.brand());
+
+            JsonNode modelRoot = objectMapper.readTree(
+                    ctx.modelFile().toFile());
+
+            JsonNode carPartsRoot = objectMapper.readTree(
+                    ctx.carPartsFile().toFile());
+
+            JsonNode models = modelRoot.get("models");
+
+            if (models == null || !models.isArray()) {
                 return;
-            } else {
-                String rootPath = args.getOptionNames().contains("rootPath") ? args.getOptionValues("rootPath").get(0)
-                        : "scraper-output";
-                this.scanAndPopulate(rootPath);
+            }
+
+            for (JsonNode modelNode : models) {
+
+                processModel(
+                        ctx,
+                        modelNode,
+                        carPartsRoot);
             }
 
         } catch (Exception e) {
-            log.error("Error initializing car data: {}", e.getMessage());
+            log.error("Error processing {}", ctx.brand(), e);
         }
     }
 
-    // Comentado ya que ahora mismo previene la ejecución y no es un método usado
-    // ahora mismo en el test
-    // /**
-    // * Escanea un directorio en busca de archivos JSON y puebla la base de datos.
-    // *
-    // * @param rootPath Ruta a la carpeta raíz (ej. scraper-output/Groups)
-    // */
-    public void scanAndPopulate(String rootPath) {
-        try {
-            // La ruta raíz siempre será la salida del scraper
-            // Cada carpeta es el grupo automovilístico (esto es relevante para
-            // carPartsGroupPath)
-            // Buscar todos los archivos JSON dentro de la ruta raíz
-            // Para cada archivo JSON, necesitamos saber si es carparts-group o
-            // ultimatespecs-brand
+    private void processModel(
+            ProcessingContext ctx,
+            JsonNode modelNode,
+            JsonNode carPartsRoot) {
 
-            Set<Path> allCarPartsFilePaths = new HashSet<>();
+        JsonNode versions = modelNode.get("versions");
 
-            Stream<Path> streamModelFiles = Files.walk(Paths.get(rootPath))
-                    .filter(Files::isRegularFile)
-                    .filter(p -> p.toString().endsWith(".json"))
-                    .filter(p -> p.getFileName().toString().startsWith("ultimatespecs-"));
+        if (versions == null || !versions.isArray()) {
+            return;
+        }
 
-            Files.walk(Paths.get(rootPath))
-                    .filter(Files::isRegularFile)
-                    .filter(p -> p.toString().endsWith(".json"))
-                    // Incluir en un conjunto hash las rutas de los archivos que son piezas
-                    // (carparts)
-                    .peek(allCarPartsFilePaths::add);
+        for (JsonNode versionNode : versions) {
 
-            // Este mapa contiene: El objeto Path para los modelos de la marca mapeado al
-            // objeto Path
-            // de las piezas (carparts) del grupo.
-            Map<Path, Path> modelsPathToCarPartsPath = new HashMap<>();
+            Vehicle vehicle = mapToVehicle(ctx, versionNode);
 
-            // Lo que necesitamos hacer:
-            // 1. Iterar sobre todas las marcas.
-            // 2. La carpeta padre es el grupo.
-            // 3. El archivo de piezas de coche asociado a ese grupo está en la misma
-            // carpeta y tiene
-            // el mismo nombre, pero comenzando con "carparts-" en minúsculas.
+            vehicle = upsertVehicle(vehicle);
 
-            for (Path modelsFilesPath : streamModelFiles.toList()) {
-                String parentFolderPath = modelsFilesPath.getParent().getFileName().toString().toLowerCase();
-                Path associateCarPartsPath = allCarPartsFilePaths.stream()
-                        .filter(p -> p.getParent().getFileName().toString().toLowerCase().equals(parentFolderPath))
-                        .findFirst().orElse(null);
-
-                if (associateCarPartsPath != null) {
-                    modelsPathToCarPartsPath.put(modelsFilesPath, associateCarPartsPath);
-                }
-
-            }
-
-            for (Map.Entry<Path, Path> entry : modelsPathToCarPartsPath.entrySet()) {
-                Path modelsFilesPath = entry.getKey();
-                Path associateCarPartsPath = entry.getValue();
-                this.populateFromFile(modelsFilesPath.toString(), associateCarPartsPath.toString());
-            }
-        } catch (IOException e) {
-            log.error("Error scanning directory {}: {}", rootPath, e.getMessage());
+            processTableVersions(
+                    ctx,
+                    versionNode.get("table_versions"),
+                    vehicle,
+                    carPartsRoot);
         }
     }
 
-    private void processFilePath(Path filePath, Path carPartsGroupPath) {
-        String carPartsFileName = carPartsGroupPath.getFileName().toString();
-        currentCarGroup = carPartsFileName.substring(0, carPartsFileName.lastIndexOf(".")).toLowerCase()
-                .trim();
-        if (currentCarGroup.contains("-")) {
-            currentCarGroup = currentCarGroup.substring(0, currentCarGroup.lastIndexOf("-")).trim();
-        }
-        String fileName = filePath.getFileName().toString();
-        if (fileName.contains("-")) {
-            currentBrand = fileName.substring(fileName.lastIndexOf("-") + 1, fileName.lastIndexOf(".")).toLowerCase()
-                    .trim();
-        } else {
-            currentBrand = fileName;
-        }
+    private Vehicle upsertVehicle(Vehicle vehicle) {
 
-        log.info("Processing file: {}", fileName);
+        return vehicleRepository
+                .findByNameAndBrand(
+                        vehicle.getName(),
+                        vehicle.getBrand())
+                .orElseGet(() -> vehicleRepository.save(vehicle));
     }
 
-    public List<Map<Vehicle, List<VehicleModel>>> populateFromFile(String filePathStr, String carPartsGroupPathStr) {
-        List<Map<Vehicle, List<VehicleModel>>> allVehiclesModels = new ArrayList<>();
-        try {
-            Path carPartsGroupPath = Paths.get(carPartsGroupPathStr);
-            processFilePath(Paths.get(filePathStr), carPartsGroupPath);
-            JsonNode root = objectMapper.readTree(new File(filePathStr));
-            JsonNode models = root.get("models");
-            if (models != null && models.isArray()) {
-                for (JsonNode modelNode : models) {
-                    Map<Vehicle, List<VehicleModel>> mapOfVehicleAndModels = processModel(modelNode);
-                    for (List<VehicleModel> listOfVM : mapOfVehicleAndModels.values()) {
-                        for (VehicleModel vm : listOfVM) {
-                            processCarPartsForVehicleModel(carPartsGroupPath, vm);
-                        }
-                    }
-                    allVehiclesModels.add(mapOfVehicleAndModels);
-                }
+    private void processTableVersions(
+            ProcessingContext ctx,
+            JsonNode tableVersions,
+            Vehicle vehicle,
+            JsonNode carPartsRoot) {
+
+        if (tableVersions == null
+                || !tableVersions.isArray()) {
+            return;
+        }
+
+        for (JsonNode entry : tableVersions) {
+
+            String modelName = extractModelName(entry);
+
+            if (modelName == null) {
+                continue;
             }
-            return allVehiclesModels;
-        } catch (IOException e) {
-            log.error("Error reading file {}: {}", filePathStr, e.getMessage());
-            return null;
+
+            EngineType type = detectEngineType(entry);
+
+            Engine engine = upsertEngine(modelName, type);
+
+            VehicleModel vm = buildVehicleModel(
+                    ctx,
+                    entry,
+                    vehicle,
+                    engine);
+
+            Set<TransmissionType> transmissions = inferTransmissionType(
+                    vm,
+                    ctx.brand(),
+                    computeATScore(
+                            vm,
+                            ctx.brand()));
+
+            for (TransmissionType transmission : transmissions) {
+
+                vm.setTransmission(transmission);
+
+                VehicleModel saved = vehicleModelRepository
+                        .save(vm);
+
+                processCarPartsForVehicleModel(
+                        saved,
+                        carPartsRoot);
+            }
         }
     }
 
-    private Product findPartByName(String partName) {
-        if (partName == null || partName.isEmpty())
-            return null;
+    private Vehicle mapToVehicle(
+            ProcessingContext ctx,
+            JsonNode versionNode) {
 
-        try {
-            JsonNode root = objectMapper.readTree(new File(generalPartsJSONPath));
-            if (!root.isArray())
-                return null;
+        Vehicle vehicle = new Vehicle();
 
-            String searchName = partName.toLowerCase().trim();
-            LevenshteinDistance distance = LevenshteinDistance.getDefaultInstance();
+        vehicle.setBrand(ctx.brand());
 
-            for (JsonNode node : root) {
+        vehicle.setName(
+                versionNode
+                        .get("actualFinalModelName")
+                        .asText());
 
-                String entryName = node.get("name").asText().toLowerCase().trim();
-                boolean exactMatch = entryName.equals(searchName);
-                boolean containsMatch = !exactMatch ? (entryName.contains(searchName) ||
-                        searchName.contains(entryName)) : false;
-                boolean hasDecentError = false;
-                int res = distance.apply(entryName, searchName);
-                int errorLimit = Math.max(3, entryName.length() / 4); // 3 errores máximo si la longitud es
-                // 12 o menos, o 1 error por cada 4 caracteres.
+        JsonNode specs = versionNode.get("specifications");
 
-                if (!exactMatch && !containsMatch) {
-                    hasDecentError = res <= errorLimit;
-                }
+        if (specs != null) {
 
-                boolean found = exactMatch || containsMatch || hasDecentError;
+            vehicle.setWheelbase(
+                    getSpec(specs, "Batalla:"));
 
-                String priceRangeStr = node.get("priceRange").asText().replace("€", "").replace(" ", "");
-                String[] priceRangeArray = priceRangeStr.split("-");
-                double lowRangePrice = Double.parseDouble(priceRangeArray[0].trim());
-                double highRangePrice = Double.parseDouble(priceRangeArray[1].trim());
+            vehicle.setAverageConsumptionPer100km(
+                    getSpec(specs, "Consumos Medio:"));
 
-                if (found) {
-                    return Product.builder()
-                            .name(node.get("name").asText())
-                            .description(node.get("description").asText())
-                            .lowRangePrice(lowRangePrice)
-                            .highRangePrice(highRangePrice)
-                            .image(node.get("image").asText())
-                            .build();
-                } else {
-                    return null;
-                }
+            vehicle.setHeight(
+                    getSpec(specs, "Alto:"));
+
+            vehicle.setLength(
+                    getSpec(specs, "Largo:"));
+
+            vehicle.setWidth(
+                    getSpec(specs, "Ancho:"));
+
+            vehicle.setWeight(
+                    getSpec(specs, "Peso:"));
+
+            vehicle.setPeriodOfProduction(
+                    getSpec(specs, "Período de producción:"));
+
+            vehicle.setEngineDisplacement(
+                    getSpec(specs, "Cilindrada:"));
+        }
+
+        return vehicle;
+    }
+
+    private String extractModelName(JsonNode entry) {
+        // El nombre del modelo suele ser el valor de la clave del tipo de motor
+        Iterator<Map.Entry<String, JsonNode>> fields = entry.fields();
+        while (fields.hasNext()) {
+            Map.Entry<String, JsonNode> field = fields.next();
+            String key = field.getKey();
+            if (isEngineCategoryKey(key)) {
+                return field.getValue().asText();
             }
-
-        } catch (IOException e) {
-            log.error("Error reading file {}: {}", generalPartsJSONPath, e.getMessage());
+        }
+        // Recurrir a "Otros" si no se encuentra ninguna clave de categoría
+        if (entry.has("Otros")) {
+            return entry.get("Otros").asText();
         }
         return null;
     }
 
-    private EngineType mapStringToEngineType(String fuelType, EngineType engineType) {
-        if (fuelType == null)
-            return null;
+    private VehicleModel buildVehicleModel(
+            ProcessingContext ctx,
+            JsonNode entry,
+            Vehicle vehicle,
+            Engine engine) {
 
-        return switch (fuelType.toUpperCase()) {
-            case "DIESEL" -> (engineType == EngineType.DIESEL) ? EngineType.DIESEL : null;
-            case "GASOLINA" -> (engineType == EngineType.PETROL
-                    || engineType == EngineType.PHEV) ? EngineType.PETROL : null;
-            case "ELECTRIC" -> (engineType == EngineType.BEV) ? EngineType.BEV : null;
-            case "PHEV" -> (engineType == EngineType.PHEV) ? EngineType.PHEV : null;
-            case "HYBRID", "HEV" -> (engineType == EngineType.HEV) ? EngineType.HEV : null;
-            default -> null;
-        };
+        return VehicleModel.builder()
+                .modelName(engine.getName())
+                .vehicle(vehicle)
+                .engine(engine)
+                .yearFirstProduction(
+                        Integer.parseInt(
+                                entry.get("Año").asText()))
+                .build();
     }
 
-    private void processCarPartsForVehicleModel(Path carPartsGroupPath, VehicleModel vehicleModel) {
-        try {
-            JsonNode carPartRoot = objectMapper.readTree(new File(carPartsGroupPath.toAbsolutePath().toString()));
-            if (carPartRoot.isArray()) {
-                for (JsonNode node : carPartRoot) {
-                    String platformGen = node.get("plataforma_generacion").asText();
-                    String fuelType = node.get("tipo_combustible").asText();
+    private Engine upsertEngine(
+            String modelName,
+            EngineType type) {
 
-                    JsonNode parts = node.get("piezas");
-                    if (parts.isArray()) {
-                        for (JsonNode part : parts) {
-                            String partName = part.asText().trim().toLowerCase();
-                            System.out.println("Buscando pieza: " + partName + " para " + vehicleModel.getModelName());
-                            Product product = findPartByName(partName);
+        return engineRepository
+                .findByNameAndEngineType(
+                        modelName,
+                        type)
+                .orElseGet(() -> engineRepository.save(
+                        Engine.builder()
+                                .name(modelName)
+                                .engineType(type)
+                                .build()));
+    }
 
-                            if (product == null) {
-                                System.out.println("No se encontró la pieza, se procede a crear una dummy.");
-                                product = Product.builder()
-                                        .name(partName)
-                                        .build();
-                                System.out.println("Pieza creada: " + product);
-                                productRepository.save(product);
-                            }
+    private void processCarPartsForVehicleModel(
+            VehicleModel vm,
+            JsonNode carPartRoot) {
 
-                            Engine eng = vehicleModel.getEngine();
-                            System.out.println("Antes de llamar al mapeo al enum, fuelType es: " + fuelType);
-                            EngineType engineType = mapStringToEngineType(fuelType, eng.getEngineType());
+        if (!carPartRoot.isArray()) {
+            return;
+        }
 
-                            System.out
-                                    .println("Para engine: " + eng.getName() + " y mapeo a EngineType: " + engineType);
+        List<Product> productsToAssociate = new ArrayList<>();
 
-                            if (engineType != null) {
-                                List<Product> productsToAdd = new ArrayList<>();
-                                productsToAdd.add(product);
-                                System.out.println(
-                                        "Asociando a " + vehicleModel.getModelName() + "->" + product.getName());
-                                // Asociar VehicleModel a Producto
-                                vehicleModelRepository.updateProducts(vehicleModel, productsToAdd);
-                            }
+        for (JsonNode node : carPartRoot) {
 
-                        }
-                    }
+            String fuelType = node.get("tipo_combustible")
+                    .asText();
 
+            JsonNode parts = node.get("piezas");
+
+            if (!parts.isArray()) {
+                continue;
+            }
+
+            for (JsonNode part : parts) {
+
+                String partName = normalize(part.asText());
+
+                Product product = resolveProduct(partName);
+
+                if (product == null) {
+                    continue;
                 }
-            } else {
-                System.out.println("carPartRoot is not array");
-            }
-        } catch (IOException e) {
-            System.err.println(e.getMessage());
-        }
 
-    }
+                EngineType mapped = mapStringToEngineType(
+                        fuelType,
+                        vm.getEngine()
+                                .getEngineType());
 
-    private Map<Vehicle, List<VehicleModel>> processModel(JsonNode modelNode) {
-        Map<Vehicle, List<VehicleModel>> vehicleModels = new HashMap<>();
-        JsonNode versions = modelNode.get("versions");
-        if (versions != null && versions.isArray()) {
-            for (JsonNode versionNode : versions) {
-                Vehicle vehicle = mapToVehicle(versionNode);
-                Vehicle finalVehicle = vehicleRepository.findByNameAndBrand(vehicle.getName(), vehicle.getBrand())
-                        .orElseGet(
-                                () -> vehicleRepository.save(vehicle));
-
-                vehicleModels.put(finalVehicle, processTableVersions(versionNode.get("table_versions"), finalVehicle));
+                if (mapped != null) {
+                    productsToAssociate.add(product);
+                }
             }
         }
 
-        return vehicleModels;
-    }
+        if (!productsToAssociate.isEmpty()) {
 
-    private Vehicle mapToVehicle(JsonNode versionNode) {
-        Vehicle vehicle = new Vehicle();
-        vehicle.setBrand(currentBrand);
-        vehicle.setName(versionNode.get("actualFinalModelName").asText());
+            try {
 
-        JsonNode specs = versionNode.get("specifications");
-        if (specs != null) {
-            vehicle.setWheelbase(getSpec(specs, "Batalla:"));
-            vehicle.setAverageConsumptionPer100km(getSpec(specs, "Consumos Medio:"));
-            vehicle.setHeight(getSpec(specs, "Alto:"));
-            vehicle.setLength(getSpec(specs, "Largo:"));
-            vehicle.setWidth(getSpec(specs, "Ancho:"));
-            vehicle.setWeight(getSpec(specs, "Peso:"));
-            vehicle.setPeriodOfProduction(getSpec(specs, "Período de producción:"));
-            vehicle.setEngineDisplacement(getSpec(specs, "Cilindrada:"));
+                dbSemaphore.acquire();
+
+                vehicleModelRepository
+                        .updateProducts(
+                                vm,
+                                productsToAssociate);
+
+            } catch (InterruptedException e) {
+
+                Thread.currentThread().interrupt();
+
+            } finally {
+
+                dbSemaphore.release();
+            }
         }
-        return vehicle;
     }
 
-    private String getSpec(JsonNode specs, String key) {
+    private Product resolveProduct(String partName) {
+
+        ProductTemplate exact = productCache.get(partName);
+
+        if (exact != null) {
+            return toProduct(exact);
+        }
+
+        for (Map.Entry<String, ProductTemplate> entry : productCache.entrySet()) {
+
+            int dist = levenshtein.apply(
+                    entry.getKey(),
+                    partName);
+
+            int limit = Math.max(
+                    3,
+                    entry.getKey().length() / 4);
+
+            if (dist <= limit) {
+                return toProduct(entry.getValue());
+            }
+        }
+
+        return productRepository.save(
+                Product.builder()
+                        .name(partName)
+                        .build());
+    }
+
+    private Product toProduct(ProductTemplate t) {
+
+        return Product.builder()
+                .name(t.name())
+                .description(t.description())
+                .lowRangePrice(t.lowRangePrice())
+                .highRangePrice(t.highRangePrice())
+                .image(t.image())
+                .build();
+    }
+
+    private String normalize(String s) {
+
+        return s == null
+                ? null
+                : s.toLowerCase().trim();
+    }
+
+    private String extractBrand(Path path) {
+
+        String file = path.getFileName().toString();
+
+        return file.substring(
+                file.lastIndexOf("-") + 1,
+                file.lastIndexOf(".")).toLowerCase();
+    }
+
+    private String getSpec(
+            JsonNode specs,
+            String key) {
+
         JsonNode node = specs.get(key);
-        return node != null ? node.asText() : null;
+
+        return node != null
+                ? node.asText()
+                : null;
     }
 
-    private List<VehicleModel> processTableVersions(JsonNode tableVersions, Vehicle vehicle) {
-        List<VehicleModel> vehicleModels = new ArrayList<>();
-        if (tableVersions != null && tableVersions.isArray()) {
-            for (JsonNode entry : tableVersions) {
-                String modelName = extractModelName(entry);
-                EngineType type = detectEngineType(entry);
-
-                if (modelName != null) {
-                    Engine engine = engineRepository.findByNameAndEngineType(modelName, type)
-                            .orElseGet(() -> engineRepository.save(Engine.builder()
-                                    .name(modelName)
-                                    .engineType(type)
-                                    .build()));
-
-                    Set<VehicleModel> vehicleModelsSet = vehicleModelRepository
-                            .findByModelNameAndVehicle(modelName, vehicle)
-                            .stream().collect(Collectors.toSet());
-
-                    if (vehicleModelsSet.isEmpty()) {
-
-                        VehicleModel dummyVm = VehicleModel.builder()
-                                .modelName(modelName)
-                                .vehicle(vehicle)
-                                .yearFirstProduction(Integer.valueOf(entry.get("Año").asText()))
-                                .engine(engine)
-                                .build();
-                        vehicleModels.add(dummyVm);
-
-                        Set<TransmissionType> inferredTransmissionTypes = inferTransmissionType(dummyVm,
-                                computeATScore(dummyVm));
-
-                        for (TransmissionType trans : inferredTransmissionTypes) {
-                            dummyVm.setTransmission(trans);
-                            VehicleModel vm = vehicleModelRepository.save(dummyVm);
-                            vehicleModelsSet.add(vm);
-                        }
-                    }
-
-                    vehicleModels.addAll(vehicleModelsSet);
-                }
-            }
+    private EngineType detectEngineType(JsonNode entry) {
+        Iterator<String> fieldNames = entry.fieldNames();
+        while (fieldNames.hasNext()) {
+            String key = fieldNames.next();
+            if (key.contains("Gasolina"))
+                return EngineType.PETROL;
+            if (key.contains("Diesel") || key.contains("Diésel"))
+                return EngineType.DIESEL;
+            if (key.contains("Eléctrico"))
+                return EngineType.BEV;
+            if (key.contains("HEV"))
+                return EngineType.HEV;
+            if (key.contains("PHEV"))
+                return EngineType.PHEV;
+            if (key.contains("REEV"))
+                return EngineType.REEV;
         }
-
-        return vehicleModels;
-    }
-
-    /**
-     * Calcula la probabilidad en escala logit de que el VehicleModel dado tenga una
-     * TA
-     * (Transmisión Automática)
-     * 
-     * @param vehicleModel El modelo de vehículo para el cual calcular la
-     *                     probabilidad
-     * @return La probabilidad en escala logit de que el VehicleModel dado tenga una
-     *         TA
-     */
-    private double computeATScore(VehicleModel vehicleModel) {
-        double score = 0;
-
-        int year = vehicleModel.getYearFirstProduction();
-        if (year < 2005) {
-            score -= 3.0;
-        }
-        if (year >= 2005 && year < 2012) {
-            score -= 1.5;
-        }
-        if (year >= 2012 && year < 2016) {
-            score += 0.5;
-        }
-        if (year >= 2016 && year < 2020) {
-            score += 1.5;
-        }
-        if (year >= 2020) {
-            score += 3.0;
-        }
-
-        // Dependiendo de su motorización
-        EngineType engineType = vehicleModel.getEngine().getEngineType();
-
-        if (engineType == EngineType.BEV) {
-            score += 2.0;
-        }
-
-        if (engineType == EngineType.PHEV || engineType == EngineType.HEV) {
-            score += 1.0;
-        }
-
-        // Con gasolina/diésel no hay cambio
-
-        System.out.println("Before switch, current brand is: " + currentBrand);
-
-        // Heurística por marca
-        switch (currentBrand) {
-            case "bmw":
-            case "mercedes-benz":
-            case "audi":
-                score += 1.5;
-                break;
-            case "dacia":
-            case "fiat":
-            case "suzuki":
-                score -= 1.5;
-                break;
-            case "ferrari":
-            case "lamborghini":
-                score += 4.0;
-                break;
-            default:
-                score += 0;
-                break;
-        }
-
-        return score;
-
+        return EngineType.PETROL; // Por defecto
     }
 
     /**
@@ -479,6 +570,7 @@ public class CarDataPopulationService implements ApplicationRunner {
 
     private Set<TransmissionType> inferTransmissionType(
             VehicleModel vehicleModel,
+            String currentBrand,
             double score // renombrado: esto NO es probabilidad, es la entrada logit
     ) {
 
@@ -589,21 +681,74 @@ public class CarDataPopulationService implements ApplicationRunner {
         return probableTransmissions;
     }
 
-    private String extractModelName(JsonNode entry) {
-        // El nombre del modelo suele ser el valor de la clave del tipo de motor
-        Iterator<Map.Entry<String, JsonNode>> fields = entry.fields();
-        while (fields.hasNext()) {
-            Map.Entry<String, JsonNode> field = fields.next();
-            String key = field.getKey();
-            if (isEngineCategoryKey(key)) {
-                return field.getValue().asText();
-            }
+    /**
+     * Calcula la probabilidad en escala logit de que el VehicleModel dado tenga una
+     * TA
+     * (Transmisión Automática)
+     * 
+     * @param vehicleModel El modelo de vehículo para el cual calcular la
+     *                     probabilidad
+     * @return La probabilidad en escala logit de que el VehicleModel dado tenga una
+     *         TA
+     */
+    private double computeATScore(VehicleModel vehicleModel, String brand) {
+        double score = 0;
+
+        int year = vehicleModel.getYearFirstProduction();
+        if (year < 2005) {
+            score -= 3.0;
         }
-        // Recurrir a "Otros" si no se encuentra ninguna clave de categoría
-        if (entry.has("Otros")) {
-            return entry.get("Otros").asText();
+        if (year >= 2005 && year < 2012) {
+            score -= 1.5;
         }
-        return null;
+        if (year >= 2012 && year < 2016) {
+            score += 0.5;
+        }
+        if (year >= 2016 && year < 2020) {
+            score += 1.5;
+        }
+        if (year >= 2020) {
+            score += 3.0;
+        }
+
+        // Dependiendo de su motorización
+        EngineType engineType = vehicleModel.getEngine().getEngineType();
+
+        if (engineType == EngineType.BEV) {
+            score += 2.0;
+        }
+
+        if (engineType == EngineType.PHEV || engineType == EngineType.HEV) {
+            score += 1.0;
+        }
+
+        // Con gasolina/diésel no hay cambio
+
+        System.out.println("Before switch, current brand is: " + brand);
+
+        // Heurística por marca
+        switch (brand) {
+            case "bmw":
+            case "mercedes-benz":
+            case "audi":
+                score += 1.5;
+                break;
+            case "dacia":
+            case "fiat":
+            case "suzuki":
+                score -= 1.5;
+                break;
+            case "ferrari":
+            case "lamborghini":
+                score += 4.0;
+                break;
+            default:
+                score += 0;
+                break;
+        }
+
+        return score;
+
     }
 
     private boolean isEngineCategoryKey(String key) {
@@ -612,23 +757,19 @@ public class CarDataPopulationService implements ApplicationRunner {
                 || key.contains("PHEV") || key.contains("REEV");
     }
 
-    private EngineType detectEngineType(JsonNode entry) {
-        Iterator<String> fieldNames = entry.fieldNames();
-        while (fieldNames.hasNext()) {
-            String key = fieldNames.next();
-            if (key.contains("Gasolina"))
-                return EngineType.PETROL;
-            if (key.contains("Diesel") || key.contains("Diésel"))
-                return EngineType.DIESEL;
-            if (key.contains("Eléctrico"))
-                return EngineType.BEV;
-            if (key.contains("HEV"))
-                return EngineType.HEV;
-            if (key.contains("PHEV"))
-                return EngineType.PHEV;
-            if (key.contains("REEV"))
-                return EngineType.REEV;
-        }
-        return EngineType.PETROL; // Por defecto
+    private EngineType mapStringToEngineType(String fuelType, EngineType engineType) {
+        if (fuelType == null)
+            return null;
+
+        return switch (fuelType.toUpperCase()) {
+            case "DIESEL" -> (engineType == EngineType.DIESEL) ? EngineType.DIESEL : null;
+            case "GASOLINA" -> (engineType == EngineType.PETROL
+                    || engineType == EngineType.PHEV) ? EngineType.PETROL : null;
+            case "ELECTRIC" -> (engineType == EngineType.BEV) ? EngineType.BEV : null;
+            case "PHEV" -> (engineType == EngineType.PHEV) ? EngineType.PHEV : null;
+            case "HYBRID", "HEV" -> (engineType == EngineType.HEV) ? EngineType.HEV : null;
+            default -> null;
+        };
     }
+
 }
