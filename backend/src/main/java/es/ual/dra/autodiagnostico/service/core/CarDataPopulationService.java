@@ -158,11 +158,15 @@ public class CarDataPopulationService {
                     .toList();
         }
 
+        System.out.println("All JSON files: " + allJsonFiles);
+
         List<Path> modelFiles = allJsonFiles.stream()
                 .filter(p -> p.getFileName()
                         .toString()
                         .startsWith("ultimatespecs-"))
                 .toList();
+
+        System.out.println("Model files: " + modelFiles);
 
         for (Path modelFile : modelFiles) {
 
