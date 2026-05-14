@@ -474,32 +474,35 @@ public class CarDataPopulationService {
     }
 
     private Product resolveProduct(String partName) {
+        // 1. Intentar encontrar el producto en la base de datos primero para evitar
+        // duplicados
+        return productRepository.findByName(partName)
+                .orElseGet(() -> {
+                    // 2. No está en la BD, buscar coincidencia exacta en la caché
+                    ProductTemplate template = productCache.get(partName);
+                    if (template != null) {
+                        return productRepository.save(toProduct(template));
+                    }
 
-        ProductTemplate exact = productCache.get(partName);
+                    // 3. Intento de búsqueda difusa en la caché
+                    for (Map.Entry<String, ProductTemplate> entry : productCache.entrySet()) {
+                        int dist = levenshtein.apply(entry.getKey(), partName);
+                        int limit = Math.max(3, entry.getKey().length() / 4);
+                        if (dist <= limit) {
+                            // Comprobar si este nombre de plantilla ya está en la BD antes de guardar
+                            String templateName = entry.getValue().name();
+                            return productRepository.findByName(templateName)
+                                    .orElseGet(() -> productRepository.save(toProduct(entry.getValue())));
+                        }
+                    }
 
-        if (exact != null) {
-            return toProduct(exact);
-        }
-
-        for (Map.Entry<String, ProductTemplate> entry : productCache.entrySet()) {
-
-            int dist = levenshtein.apply(
-                    entry.getKey(),
-                    partName);
-
-            int limit = Math.max(
-                    3,
-                    entry.getKey().length() / 4);
-
-            if (dist <= limit) {
-                return toProduct(entry.getValue());
-            }
-        }
-
-        return productRepository.save(
-                Product.builder()
-                        .name(partName)
-                        .build());
+                    // 4. Caso de reserva: Guardar un producto mínimo si no se encuentra ninguna
+                    // coincidencia
+                    return productRepository.save(
+                            Product.builder()
+                                    .name(partName)
+                                    .build());
+                });
     }
 
     private Product toProduct(ProductTemplate t) {
