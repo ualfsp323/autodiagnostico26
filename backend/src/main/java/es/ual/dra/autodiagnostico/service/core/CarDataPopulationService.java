@@ -18,6 +18,7 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.context.ApplicationContext;
 
 import java.io.File;
 import java.io.IOException;
@@ -37,7 +38,7 @@ public class CarDataPopulationService {
     private final VehicleModelRepository vehicleModelRepository;
     private final EngineRepository engineRepository;
     private final ProductRepository productRepository;
-
+    private final ApplicationContext applicationContext;
     private final ObjectMapper objectMapper;
 
     private static final String GENERAL_PARTS_JSON = "src/main/resources/general-car-parts.json";
@@ -126,11 +127,13 @@ public class CarDataPopulationService {
 
         log.info("Discovered {} jobs", jobs.size());
 
+        CarDataPopulationService self = applicationContext.getBean(CarDataPopulationService.class);
+
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
 
             List<Future<Object>> futures = jobs.stream()
                     .map(job -> executor.submit(() -> {
-                        processJob(job);
+                        self.processJob(job);
                         return null;
                     }))
                     .toList();
@@ -249,9 +252,19 @@ public class CarDataPopulationService {
 
             vehicle = upsertVehicle(vehicle);
 
+            System.out.println("After upserting vehicle: " + vehicle.getName() + " | " + vehicle.getIdVehicle());
+            System.out.println("All vehicles in DB: " + vehicleRepository.findAll());
+
+            JsonNode tableVersions = versionNode.get("table_versions");
+
+            if (tableVersions == null || !tableVersions.isArray()) {
+                System.out.println("tableVersions is null or not an array: " + versionNode);
+                return;
+            }
+
             processTableVersions(
                     ctx,
-                    versionNode.get("table_versions"),
+                    tableVersions,
                     vehicle,
                     carPartsRoot);
         }
@@ -383,6 +396,19 @@ public class CarDataPopulationService {
             JsonNode entry,
             Vehicle vehicle,
             Engine engine) {
+
+        JsonNode year = entry.get("Año");
+
+        System.out.println("What are entry children like? " + entry.fieldNames());
+
+        System.out.println("What's year like? " + year);
+
+        try {
+            int yearInt = Integer.parseInt(year.asText());
+            System.out.println("Year as int: " + yearInt);
+        } catch (NumberFormatException e) {
+            System.err.println("Error parsing year: " + year.asText());
+        }
 
         return VehicleModel.builder()
                 .modelName(engine.getName())

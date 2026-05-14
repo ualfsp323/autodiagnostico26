@@ -23,128 +23,127 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 @ActiveProfiles("test")
-@Transactional
 @Commit
 class DataPopulationServiceIntegrationTest {
 
-    @Autowired
-    private CarDataPopulationService dataPopulationService;
+        @Autowired
+        private CarDataPopulationService dataPopulationService;
 
-    @Autowired
-    private VehicleRepository vehicleRepository;
+        @Autowired
+        private VehicleRepository vehicleRepository;
 
-    @Autowired
-    private VehicleModelRepository vehicleModelRepository;
+        @Autowired
+        private VehicleModelRepository vehicleModelRepository;
 
-    @Autowired
-    private EngineRepository engineRepository;
+        @Autowired
+        private EngineRepository engineRepository;
 
-    /**
-     * IMPORTANT:
-     *
-     * Your rewritten architecture expects:
-     *
-     * scraper-output/
-     * └── vag/
-     * ├── ultimatespecs-seat.json
-     * └── carparts-vag.json
-     *
-     * So create this structure under:
-     *
-     * src/test/resources/test-scraper-output/
-     */
-    private static final String TEST_ROOT = "src/test/resources/test-scraper-output";
+        /**
+         * IMPORTANT:
+         *
+         * Your rewritten architecture expects:
+         *
+         * scraper-output/
+         * └── vag/
+         * ├── ultimatespecs-seat.json
+         * └── carparts-vag.json
+         *
+         * So create this structure under:
+         *
+         * src/test/resources/test-scraper-output/
+         */
+        private static final String TEST_ROOT = "src/test/resources/test-scraper-output";
 
-    @BeforeEach
-    void cleanDatabase() {
+        @BeforeEach
+        void cleanDatabase() {
 
-        vehicleModelRepository.deleteAll();
-        engineRepository.deleteAll();
-        vehicleRepository.deleteAll();
-    }
+                vehicleModelRepository.deleteAll();
+                engineRepository.deleteAll();
+                vehicleRepository.deleteAll();
+        }
 
-    @Test
-    void shouldPopulateDatabaseFromJsonFiles()
-            throws Exception {
+        @Test
+        void shouldPopulateDatabaseFromJsonFiles()
+                        throws Exception {
 
-        dataPopulationService.scanAndPopulate(TEST_ROOT);
+                dataPopulationService.scanAndPopulate(TEST_ROOT);
 
-        List<Vehicle> vehicles = vehicleRepository.findAll();
+                List<Vehicle> vehicles = vehicleRepository.findAll();
 
-        assertFalse(
-                vehicles.isEmpty(),
-                "Vehicles should be populated");
+                assertFalse(
+                                vehicles.isEmpty(),
+                                "Vehicles should be populated");
 
-        // ------------------------------------------------
-        // COMPROBAR SEAT MII
-        // ------------------------------------------------
+                // ------------------------------------------------
+                // COMPROBAR SEAT MII
+                // ------------------------------------------------
 
-        Vehicle mii = vehicles.stream()
-                .filter(v -> v.getName()
-                        .equalsIgnoreCase(
-                                "Seat Mii Ficha Tecnica"))
-                .findFirst()
-                .orElseThrow(() -> new AssertionError(
-                        "Seat Mii should exist"));
+                Vehicle mii = vehicles.stream()
+                                .filter(v -> v.getName()
+                                                .equalsIgnoreCase(
+                                                                "Seat Mii Ficha Tecnica"))
+                                .findFirst()
+                                .orElseThrow(() -> new AssertionError(
+                                                "Seat Mii should exist"));
 
-        assertEquals(
-                "seat",
-                mii.getBrand());
+                assertEquals(
+                                "seat",
+                                mii.getBrand());
 
-        assertEquals(
-                "242.1 cm / 95.31 pulgadas",
-                mii.getWheelbase());
+                assertEquals(
+                                "242.1 cm / 95.31 pulgadas",
+                                mii.getWheelbase());
 
-        // ------------------------------------------------
-        // COMPROBAR VARIANTES IBIZA
-        // ------------------------------------------------
+                // ------------------------------------------------
+                // COMPROBAR VARIANTES IBIZA
+                // ------------------------------------------------
 
-        List<Vehicle> ibizas = vehicles.stream()
-                .filter(v -> v.getName()
-                        .toLowerCase()
-                        .contains("ibiza"))
-                .toList();
+                List<Vehicle> ibizas = vehicles.stream()
+                                .filter(v -> v.getName()
+                                                .toLowerCase()
+                                                .contains("ibiza"))
+                                .toList();
 
-        assertEquals(
-                6,
-                ibizas.size(),
-                "Should contain 6 Ibiza variants");
+                assertEquals(
+                                6,
+                                ibizas.size(),
+                                "Should contain 6 Ibiza variants");
 
-        // ------------------------------------------------
-        // COMPROBAR MODELOS VEHÍCULOS
-        // ------------------------------------------------
+                // ------------------------------------------------
+                // COMPROBAR MODELOS VEHÍCULOS
+                // ------------------------------------------------
 
-        List<VehicleModel> models = vehicleModelRepository.findAll();
+                List<VehicleModel> models = vehicleModelRepository.findAll();
 
-        assertFalse(
-                models.isEmpty(),
-                "Vehicle models should exist");
+                assertFalse(
+                                models.isEmpty(),
+                                "Vehicle models should exist");
 
-        assertTrue(
-                models.size() >= 2,
-                "Should have at least 2 models");
+                assertTrue(
+                                models.size() >= 2,
+                                "Should have at least 2 models");
 
-        // ------------------------------------------------
-        // COMPROBAR MOTORES
-        // ------------------------------------------------
+                // ------------------------------------------------
+                // COMPROBAR MOTORES
+                // ------------------------------------------------
 
-        List<Engine> engines = engineRepository.findAll();
+                List<Engine> engines = engineRepository.findAll();
 
-        assertFalse(
-                engines.isEmpty(),
-                "Engines should exist");
+                assertFalse(
+                                engines.isEmpty(),
+                                "Engines should exist");
 
-        // ------------------------------------------------
-        // OUTPUT PARA DEBUG (OPCIONAL)
-        // ------------------------------------------------
+                // ------------------------------------------------
+                // OUTPUT PARA DEBUG (OPCIONAL)
+                // ------------------------------------------------
 
-        System.out.println("\n=== VEHICLES ===");
-        vehicles.forEach(System.out::println);
+                System.out.println("\n=== VEHICLES ===");
+                vehicles.forEach(System.out::println);
 
-        System.out.println("\n=== MODELS ===");
-        models.forEach(System.out::println);
+                System.out.println("\n=== MODELS ===");
+                models.forEach(System.out::println);
 
-        System.out.println("\n=== ENGINES ===");
-        engines.forEach(System.out::println);
-    }
+                System.out.println("\n=== ENGINES ===");
+                engines.forEach(System.out::println);
+        }
 }
