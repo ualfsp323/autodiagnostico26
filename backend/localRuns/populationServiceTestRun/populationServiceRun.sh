@@ -52,13 +52,13 @@ sudo docker rm -f "$MAVEN_CONTAINER" >/dev/null 2>&1 || true
 # Skip tests with "-DskipTests for production"
 (sudo docker run --name "$MAVEN_CONTAINER" --rm \
     --network "$DOCKER_NETWORK" \
-    -DskipTests \
     -v "$BACKEND_DIR":/usr/src/mymaven \
     -w /usr/src/mymaven \
     -p 8081:8081 \
+    -e SPRING_DATASOURCE_URL="jdbc:mysql://$MYSQL_CONTAINER:3306/$MYSQL_DB?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true" \
+    -e SPRING_DATASOURCE_USERNAME=root \
+    -e SPRING_DATASOURCE_PASSWORD="$MYSQL_ROOT_PASSWORD" \
     maven:3.9.15-eclipse-temurin-21 \
     mvn spring-boot:run \
-    -Dspring.datasource.url="jdbc:mysql://$MYSQL_CONTAINER:$MYSQL_PORT/$MYSQL_DB?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true" \
-    -Dspring.datasource.username=root \
-    -Dspring.datasource.password="$MYSQL_ROOT_PASSWORD" \
+    -DskipTests \
     -Dspring-boot.run.arguments="--rootPath=src/main/resources/scraper-output") | tee mavenLog.txt

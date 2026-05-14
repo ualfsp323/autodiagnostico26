@@ -52,13 +52,13 @@ docker rm -f $MAVEN_CONTAINER -ErrorAction SilentlyContinue | Out-Null
 docker run --name $MAVEN_CONTAINER --rm `
     --network $DOCKER_NETWORK `
     -v "$BACKEND_DIR:/usr/src/mymaven" `
-    -DSkipTests `
     -w /usr/src/mymaven `
     -p 8081:8081 `
+    -e "SPRING_DATASOURCE_URL=jdbc:mysql://$MYSQL_CONTAINER:3306/$MYSQL_DB?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true" `
+    -e "SPRING_DATASOURCE_USERNAME=root" `
+    -e "SPRING_DATASOURCE_PASSWORD=$MYSQL_ROOT_PASSWORD" `
     maven:3.9.15-eclipse-temurin-21 `
     mvn spring-boot:run `
-    -Dspring.datasource.url="jdbc:mysql://$MYSQL_CONTAINER`:$MYSQL_PORT/$MYSQL_DB?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true" `
-    -Dspring.datasource.username=root `
-    -Dspring.datasource.password="$MYSQL_ROOT_PASSWORD" `
+    -DskipTests `
     -Dspring-boot.run.arguments="--rootPath=src/main/resources/scraper-output" `
     2>&1 | Tee-Object -FilePath "mavenLog.txt"
