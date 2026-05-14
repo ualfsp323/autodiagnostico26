@@ -52,6 +52,7 @@ docker rm -f $MAVEN_CONTAINER -ErrorAction SilentlyContinue | Out-Null
 docker run --name $MAVEN_CONTAINER --rm `
     --network $DOCKER_NETWORK `
     -v "$BACKEND_DIR:/usr/src/mymaven" `
+    -DSkipTests `
     -w /usr/src/mymaven `
     -p 8081:8081 `
     maven:3.9.15-eclipse-temurin-21 `

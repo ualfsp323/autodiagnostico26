@@ -49,8 +49,10 @@ fi
 echo "Starting Application in Docker (Population will run on startup)..."
 sudo docker rm -f "$MAVEN_CONTAINER" >/dev/null 2>&1 || true
 
+# Skip tests with "-DskipTests for production"
 (sudo docker run --name "$MAVEN_CONTAINER" --rm \
     --network "$DOCKER_NETWORK" \
+    -DskipTests \
     -v "$BACKEND_DIR":/usr/src/mymaven \
     -w /usr/src/mymaven \
     -p 8081:8081 \
