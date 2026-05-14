@@ -51,12 +51,7 @@ public class CarDataPopulationService {
     /**
      * Limita presión sobre DB.
      */
-    private final Semaphore dbSemaphore = new Semaphore(16);
-
-    /**
-     * Distancia fuzzy reutilizable.
-     */
-    private final LevenshteinDistance levenshtein = LevenshteinDistance.getDefaultInstance();
+    private final Semaphore dbSemaphore = new Semaphore(10);
 
     /**
      * DTO interno inmutable.
@@ -133,7 +128,12 @@ public class CarDataPopulationService {
 
             List<Future<Object>> futures = jobs.stream()
                     .map(job -> executor.submit(() -> {
-                        self.processJob(job);
+                        dbSemaphore.acquire();
+                        try {
+                            self.processJob(job);
+                        } finally {
+                            dbSemaphore.release();
+                        }
                         return null;
                     }))
                     .toList();
@@ -318,13 +318,6 @@ public class CarDataPopulationService {
             for (TransmissionType transmission : transmissions) {
 
                 vm.setTransmission(transmission);
-
-                VehicleModel saved = vehicleModelRepository
-                        .save(vm);
-
-                processCarPartsForVehicleModel(
-                        saved,
-                        carPartsRoot);
             }
         }
     }
@@ -433,113 +426,6 @@ public class CarDataPopulationService {
                                 .name(modelName)
                                 .engineType(type)
                                 .build()));
-    }
-
-    private void processCarPartsForVehicleModel(
-            VehicleModel vm,
-            JsonNode carPartRoot) {
-
-        if (!carPartRoot.isArray()) {
-            return;
-        }
-
-        List<Product> productsToAssociate = new ArrayList<>();
-
-        for (JsonNode node : carPartRoot) {
-
-            String fuelType = node.get("tipo_combustible")
-                    .asText();
-
-            JsonNode parts = node.get("piezas");
-
-            if (!parts.isArray()) {
-                continue;
-            }
-
-            for (JsonNode part : parts) {
-
-                String partName = normalize(part.asText());
-
-                Product product = resolveProduct(partName);
-
-                if (product == null) {
-                    continue;
-                }
-
-                EngineType mapped = mapStringToEngineType(
-                        fuelType,
-                        vm.getEngine()
-                                .getEngineType());
-
-                if (mapped != null) {
-                    productsToAssociate.add(product);
-                }
-            }
-        }
-
-        if (!productsToAssociate.isEmpty()) {
-
-            try {
-
-                dbSemaphore.acquire();
-
-                vehicleModelRepository
-                        .updateProducts(
-                                vm,
-                                productsToAssociate);
-
-            } catch (InterruptedException e) {
-
-                Thread.currentThread().interrupt();
-
-            } finally {
-
-                dbSemaphore.release();
-            }
-        }
-    }
-
-    private Product resolveProduct(String partName) {
-        // 1. Intentar encontrar el producto en la base de datos primero para evitar
-        // duplicados
-        return productRepository.findByName(partName)
-                .orElseGet(() -> {
-                    // 2. No está en la BD, buscar coincidencia exacta en la caché
-                    ProductTemplate template = productCache.get(partName);
-                    if (template != null) {
-                        return productRepository.save(toProduct(template));
-                    }
-
-                    // 3. Intento de búsqueda difusa en la caché
-                    for (Map.Entry<String, ProductTemplate> entry : productCache.entrySet()) {
-                        int dist = levenshtein.apply(entry.getKey(), partName);
-                        int limit = Math.max(3, entry.getKey().length() / 4);
-                        if (dist <= limit) {
-                            // Comprobar si este nombre de plantilla ya está en la BD antes de guardar
-                            String templateName = entry.getValue().name();
-                            return productRepository.findByName(templateName)
-                                    .orElseGet(() -> productRepository.save(toProduct(entry.getValue())));
-                        }
-                    }
-
-                    // 4. Caso de reserva: Guardar un producto mínimo si no se encuentra ninguna
-                    // coincidencia
-                    return productRepository.save(
-                            Product.builder()
-                                    .name(partName)
-                                    .build());
-                });
-    }
-
-    private Product toProduct(ProductTemplate t) {
-
-        return Product.builder()
-                .name(t.name())
-                .description(t.description())
-                .lowRangePrice(t.lowRangePrice())
-                .highRangePrice(t.highRangePrice())
-                .image(t.image())
-                .build();
     }
 
     private String normalize(String s) {
@@ -788,21 +674,6 @@ public class CarDataPopulationService {
         return key.contains("Gasolina") || key.contains("Diesel") || key.contains("Diésel")
                 || key.contains("Eléctrico") || key.contains("Híbrido") || key.contains("HEV")
                 || key.contains("PHEV") || key.contains("REEV");
-    }
-
-    private EngineType mapStringToEngineType(String fuelType, EngineType engineType) {
-        if (fuelType == null)
-            return null;
-
-        return switch (fuelType.toUpperCase()) {
-            case "DIESEL" -> (engineType == EngineType.DIESEL) ? EngineType.DIESEL : null;
-            case "GASOLINA" -> (engineType == EngineType.PETROL
-                    || engineType == EngineType.PHEV) ? EngineType.PETROL : null;
-            case "ELECTRIC" -> (engineType == EngineType.BEV) ? EngineType.BEV : null;
-            case "PHEV" -> (engineType == EngineType.PHEV) ? EngineType.PHEV : null;
-            case "HYBRID", "HEV" -> (engineType == EngineType.HEV) ? EngineType.HEV : null;
-            default -> null;
-        };
     }
 
 }
