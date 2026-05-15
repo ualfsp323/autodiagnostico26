@@ -7,18 +7,16 @@ import org.springframework.transaction.annotation.Transactional;
 
 import es.ual.dra.autodiagnostico.model.entitity.user.AppUser;
 import es.ual.dra.autodiagnostico.model.entitity.user.UserRole;
-import es.ual.dra.autodiagnostico.model.entitity.chat.TallerAssignment;
 import es.ual.dra.autodiagnostico.repository.UserRepository;
-import es.ual.dra.autodiagnostico.repository.TallerAssignmentRepository;
+import es.ual.dra.autodiagnostico.model.entitity.core.Workshop;
+import es.ual.dra.autodiagnostico.repository.WorkshopRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
-import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -26,7 +24,7 @@ import java.util.UUID;
 public class MechanicsDataInitializer implements CommandLineRunner {
 
     private final UserRepository userRepository;
-    private final TallerAssignmentRepository tallerAssignmentRepository;
+    private final WorkshopRepository workshopRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -37,21 +35,22 @@ public class MechanicsDataInitializer implements CommandLineRunner {
     }
 
     private void initializeMechanicsAndClients() {
-        // Ensure 10 mechanics exist (idempotent by email).
+        // Ensure mechanics exist (idempotent by email).
         List<AppUser> mechanics = new ArrayList<>();
-        for (int i = 1; i <= 10; i++) {
+        for (int i = 1; i <= 4; i++) {
             String email = "mecanico" + i + "@taller.local";
             AppUser mechanic = upsertUser(
                     email,
-                    "Mecánico " + i,
+                    mechanicName(i),
                     UserRole.TALLER,
                     "password123",
                     "https://api.dicebear.com/9.x/initials/svg?seed=M" + i + "&backgroundColor=1a6bbd");
             mechanics.add(mechanic);
         }
 
+        initializeWorkshops(mechanics);
+
         // Ensure 15 default clients exist (idempotent by email).
-        List<AppUser> clients = new ArrayList<>();
         for (int i = 1; i <= 15; i++) {
             String email = "cliente" + i + "@user.local";
             AppUser client = upsertUser(
@@ -60,25 +59,9 @@ public class MechanicsDataInitializer implements CommandLineRunner {
                     UserRole.USER,
                     "password123",
                     "https://api.dicebear.com/9.x/initials/svg?seed=C" + i + "&backgroundColor=1a6bbd");
-            clients.add(client);
         }
 
-        // Include any manually created users too.
-        List<AppUser> allMechanics = userRepository.findByRole(UserRole.TALLER);
-        List<AppUser> allClients = userRepository.findByRole(UserRole.USER);
-
-        if (allMechanics.isEmpty() || allClients.isEmpty()) {
-            log.warn("No mechanics or clients available to assign.");
-            return;
-        }
-
-        allMechanics.sort(Comparator.comparing(AppUser::getId));
-        allClients.sort(Comparator.comparing(AppUser::getId));
-
-        rebalanceAssignments(allMechanics, allClients);
-
-        log.info("Mechanics and clients initialization completed. mechanics={}, clients={}", allMechanics.size(),
-                allClients.size());
+        log.info("Mechanics, workshops and clients initialization completed.");
     }
 
     private AppUser upsertUser(String email, String fullName, UserRole role, String rawPassword, String avatarUrl) {
@@ -105,33 +88,50 @@ public class MechanicsDataInitializer implements CommandLineRunner {
         return saved;
     }
 
-    private void rebalanceAssignments(List<AppUser> mechanics, List<AppUser> clients) {
-        LocalDateTime now = LocalDateTime.now();
+    private void initializeWorkshops(List<AppUser> mechanics) {
+        upsertWorkshop("Taller Central Autodiagnostico", "Calle Principal 123, Almeria", "+34 950 100 201",
+                "central@taller.local", "L-V 08:00-18:00", "/taller1.png", 6, mechanics.get(0), 36.8381, -2.4597);
+        upsertWorkshop("Auto Diagnosis Express", "Avenida del Mediterraneo 45, Almeria", "+34 950 100 202",
+                "express@taller.local", "L-S 09:00-20:00", "/taller2.jpg", 4, mechanics.get(1), 36.8348, -2.4492);
+        upsertWorkshop("Reparaciones Rapidas Sur", "Plaza Mayor 8, Almeria", "+34 950 100 203",
+                "rapidas@taller.local", "L-V 07:30-16:30", "/taller3.jpg", 5, mechanics.get(2), 36.8424, -2.4665);
+        upsertWorkshop("MotorLab Costa", "Camino de Ronda 72, Almeria", "+34 950 100 204",
+                "motorlab@taller.local", "L-V 10:00-19:00", "/taller4.jpg", 3, mechanics.get(3), 36.8296, -2.4428);
+    }
 
-        List<TallerAssignment> activeAssignments = tallerAssignmentRepository.findByActiveTrue();
-        for (TallerAssignment assignment : activeAssignments) {
-            assignment.setActive(false);
-            assignment.setUpdatedAt(now);
-        }
-        if (!activeAssignments.isEmpty()) {
-            tallerAssignmentRepository.saveAll(activeAssignments);
-        }
+    private void upsertWorkshop(
+            String name,
+            String address,
+            String phone,
+            String email,
+            String schedule,
+            String photoUrl,
+            int vehicleLimit,
+            AppUser mechanic,
+            double latitude,
+            double longitude) {
+        Workshop workshop = workshopRepository.findByNameIgnoreCase(name).orElseGet(Workshop::new);
+        workshop.setName(name);
+        workshop.setAddress(address);
+        workshop.setPhone(phone);
+        workshop.setEmail(email);
+        workshop.setSchedule(schedule);
+        workshop.setPhotoUrl(photoUrl);
+        workshop.setVehicleLimit(vehicleLimit);
+        workshop.setMechanicId(mechanic.getId());
+        workshop.setLatitude(latitude);
+        workshop.setLongitude(longitude);
+        workshopRepository.save(workshop);
+        log.info("Upserted workshop {} for mechanic {}", name, mechanic.getEmail());
+    }
 
-        for (int i = 0; i < clients.size(); i++) {
-            AppUser client = clients.get(i);
-            AppUser mechanic = mechanics.get(i % mechanics.size());
-
-            TallerAssignment assignment = TallerAssignment.builder()
-                    .tallerId(mechanic.getId())
-                    .clientId(client.getId())
-                    .sessionUuid(UUID.randomUUID().toString())
-                    .active(true)
-                    .description("Asignacion inicial de cliente a taller")
-                    .createdAt(now)
-                    .updatedAt(now)
-                    .build();
-            tallerAssignmentRepository.save(assignment);
-            log.info("Assigned client {} to mechanic {}", client.getEmail(), mechanic.getEmail());
-        }
+    private String mechanicName(int index) {
+        return switch (index) {
+            case 1 -> "Carlos Medina";
+            case 2 -> "Lucia Navarro";
+            case 3 -> "Andres Molina";
+            case 4 -> "Marta Salas";
+            default -> "Mecanico " + index;
+        };
     }
 }
