@@ -114,6 +114,11 @@ export class LoginComponent implements OnInit {
       return;
     }
 
+    if (!this.isValidEmail(email)) {
+      this.emailFieldError = 'Formato de correo inválido. Debe ser usuario@dominio.com';
+      return;
+    }
+
     if (!password) {
       this.errorMessage = 'Escribe una contraseña para crear la cuenta.';
       return;
@@ -187,5 +192,9 @@ private completeSession(user: AuthUserResponse): void {
 
   private isConflictError(error: unknown): boolean {
     return typeof error === 'object' && error !== null && 'status' in error && (error as { status?: number }).status === 409;
+  }
+
+  private isValidEmail(email: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
 }
