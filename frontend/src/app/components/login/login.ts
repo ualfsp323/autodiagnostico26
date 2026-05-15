@@ -79,6 +79,11 @@ export class LoginComponent implements OnInit {
       return;
     }
 
+    if (!this.isValidEmail(email)) {
+      this.emailFieldError = 'Formato de correo inválido. Debe ser usuario@dominio.com';
+      return;
+    }
+
     if (!this.password.trim()) {
       this.errorMessage = 'Escribe tu contraseña para continuar.';
       return;
@@ -86,6 +91,7 @@ export class LoginComponent implements OnInit {
 
     this.isSubmitting = true;
     this.errorMessage = '';
+    this.emailFieldError = '';
 
 
     this.authApiService.login({ email, password: this.password }).subscribe({
