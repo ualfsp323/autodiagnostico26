@@ -100,15 +100,26 @@ export class MapComponent implements OnDestroy {
   }
 
   private loadWorkshops(lat: number, lng: number) {
-    this.workshopService.getNearbyWorkshops(lat, lng).subscribe(workshops => {
-      this.clearWorkshopMarkers();
-      workshops.forEach(w => {
-        const marker = this.L.marker([w.lat, w.lng])
-          .addTo(this.map)
-          .bindPopup(`<b>${w.name}</b><br>${w.address}`);
-        this.workshopMarkers.push(marker);
+
+    this.workshopService
+      .getNearbyWorkshops(lat, lng)
+      .subscribe(workshops => {
+
+        this.clearWorkshopMarkers();
+
+        workshops.forEach(w => {
+
+          const marker = this.L
+            .marker([w.latitude, w.longitude])
+            .addTo(this.map)
+            .bindPopup(`
+              <b>${w.name}</b><br>
+              ${w.address}
+            `);
+
+          this.workshopMarkers.push(marker);
+        });
       });
-    });
   }
 
   private clearWorkshopMarkers() {
