@@ -20,7 +20,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -53,10 +52,6 @@ public class UltimateSpecsVehicleScraperService {
 
                 File outputDir = new File("logos");
                 outputDir.mkdirs();
-
-                List<Map<String, Object>> allBrandsData = new ArrayList<>();
-
-                // int debugCount = 0;
 
                 boolean foundDodge = false;
 
@@ -311,8 +306,6 @@ public class UltimateSpecsVehicleScraperService {
                                         .timeout(10000)
                                         .get();
 
-                        Element img = doc.selectFirst(".left_column_top_model_image_div");
-
                         Element resumo_ficha = doc.selectFirst(".resumo_ficha");
 
                         if (resumo_ficha != null) {
@@ -511,58 +504,6 @@ public class UltimateSpecsVehicleScraperService {
 
         private String sanitize(String input) {
                 return input.replaceAll("[^a-zA-Z0-9]", "_");
-        }
-
-        private String formatForDebug(Object value) {
-                StringBuilder builder = new StringBuilder();
-                appendFormatted(builder, value, 0);
-                return builder.toString();
-        }
-
-        private void appendFormatted(StringBuilder builder, Object value, int depth) {
-                if (value == null) {
-                        builder.append("<null>");
-                        return;
-                }
-
-                if (value instanceof Map<?, ?> mapValue) {
-                        builder.append("{\n");
-                        int index = 0;
-                        for (Map.Entry<?, ?> entry : mapValue.entrySet()) {
-                                builder.append(indent(depth + 1))
-                                                .append(String.valueOf(entry.getKey()))
-                                                .append(": ");
-                                appendFormatted(builder, entry.getValue(), depth + 1);
-                                if (index < mapValue.size() - 1) {
-                                        builder.append(',');
-                                }
-                                builder.append('\n');
-                                index++;
-                        }
-                        builder.append(indent(depth)).append('}');
-                        return;
-                }
-
-                if (value instanceof List<?> listValue) {
-                        builder.append("[\n");
-                        for (int i = 0; i < listValue.size(); i++) {
-                                builder.append(indent(depth + 1));
-                                appendFormatted(builder, listValue.get(i), depth + 1);
-                                if (i < listValue.size() - 1) {
-                                        builder.append(',');
-                                }
-                                builder.append('\n');
-                        }
-                        builder.append(indent(depth)).append(']');
-                        return;
-                }
-
-                if (value instanceof String stringValue) {
-                        builder.append('"').append(stringValue).append('"');
-                        return;
-                }
-
-                builder.append(String.valueOf(value));
         }
 
         private String indent(int depth) {

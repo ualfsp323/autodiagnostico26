@@ -165,3 +165,4 @@ replay_pid*
 yarn.lock
 .yarn/
 .pnpm-store/
+package-lock.json

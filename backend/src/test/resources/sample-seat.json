@@ -7,169 +7,29 @@
           "table_versions": [
             {
               "Eléctrico": "Mii electric Ficha Tecnica",
-              "Comparar con otro coche": "",
               "Potencia": "83 hp / 61 kW",
-              "Año": "2019",
-              "Capacidad de la batería": "36,8 kWh"
+              "Año": "2019"
             },
             {
               "Motores de Gasolina": "Mii 1.0 12V 60HP Ficha Tecnica",
-              "Comparar con otro coche": "",
-              "Cilindrada": "999 cm3 (61 cu-in)",
               "Potencia": "60 hp / 44 kW",
               "Año": "2012"
-            },
-            {
-              "Motores de Gasolina": "Mii 1.0 12V 60HP Reference Ficha Tecnica",
-              "Comparar con otro coche": "",
-              "Cilindrada": "999 cm3 (61 cu-in)",
-              "Potencia": "60 hp / 44 kW",
-              "Año": "2012"
-            },
-            {
-              "Motores de Gasolina": "Mii 1.0 12V 60HP Style Sport Ficha Tecnica",
-              "Comparar con otro coche": "",
-              "Cilindrada": "999 cm3 (61 cu-in)",
-              "Potencia": "60 hp / 44 kW",
-              "Año": "2012"
-            },
-            {
-              "Motores de Gasolina": "Mii 1.0 12V 75HP Ficha Tecnica",
-              "Comparar con otro coche": "",
-              "Cilindrada": "999 cm3 (61 cu-in)",
-              "Potencia": "75 hp / 55 kW",
-              "Año": "2012"
-            },
-            {
-              "Motores de Gasolina": "Mii 1.0 12V 75HP Reference Ficha Tecnica",
-              "Comparar con otro coche": "",
-              "Cilindrada": "999 cm3 (61 cu-in)",
-              "Potencia": "75 hp / 55 kW",
-              "Año": "2012"
-            },
-            {
-              "Motores de Gasolina": "Mii 1.0 12V 75HP Style Sport Ficha Tecnica",
-              "Comparar con otro coche": "",
-              "Cilindrada": "999 cm3 (61 cu-in)",
-              "Potencia": "75 hp / 55 kW",
-              "Año": "2012"
-            },
-            {
-              "Motores de Gasolina": "Mii 1.0 12V E-Ecomotive 60HP Ficha Tecnica",
-              "Comparar con otro coche": "",
-              "Cilindrada": "999 cm3 (61 cu-in)",
-              "Potencia": "60 hp / 44 kW",
-              "Año": "2012"
-            },
-            {
-              "Motores de Gasolina": "Mii 1.0 12V E-Ecomotive 60HP Style Ficha Tecnica",
-              "Comparar con otro coche": "",
-              "Cilindrada": "999 cm3 (61 cu-in)",
-              "Potencia": "60 hp / 44 kW",
-              "Año": "2012"
-            },
-            {
-              "Motores de Gasolina": "Mii 1.0 12V Ecomotive 75HP Ficha Tecnica",
-              "Comparar con otro coche": "",
-              "Cilindrada": "999 cm3 (61 cu-in)",
-              "Potencia": "75 hp / 55 kW",
-              "Año": "2012"
-            },
-            {
-              "Motores de Gasolina": "Mii 5-doors 1.0 60HP Reference Ficha Tecnica",
-              "Comparar con otro coche": "",
-              "Cilindrada": "999 cm3 (61 cu-in)",
-              "Potencia": "60 hp / 44 kW",
-              "Año": "2012"
-            },
-            {
-              "Motores de Gasolina": "Mii 5-doors 1.0 60HP Reference Ecomotive Ficha Tecnica",
-              "Comparar con otro coche": "",
-              "Cilindrada": "999 cm3 (61 cu-in)",
-              "Potencia": "60 hp / 44 kW",
-              "Año": "2012"
-            },
-            {
-              "Motores de Gasolina": "Mii 5-doors 1.0 60HP Style Ficha Tecnica",
-              "Comparar con otro coche": "",
-              "Cilindrada": "999 cm3 (61 cu-in)",
-              "Potencia": "60 hp / 44 kW",
-              "Año": "2012"
-            },
-            {
-              "Motores de Gasolina": "Mii 5-doors 1.0 60HP Style Ecomotive Ficha Tecnica",
-              "Comparar con otro coche": "",
-              "Cilindrada": "999 cm3 (61 cu-in)",
-              "Potencia": "60 hp / 44 kW",
-              "Año": "2012"
-            },
-            {
-              "Motores de Gasolina": "Mii 5-doors 1.0 75HP Reference Ficha Tecnica",
-              "Comparar con otro coche": "",
-              "Cilindrada": "999 cm3 (61 cu-in)",
-              "Potencia": "75 hp / 55 kW",
-              "Año": "2012"
-            },
-            {
-              "Motores de Gasolina": "Mii 5-doors 1.0 75HP Reference Ecomotive Ficha Tecnica",
-              "Comparar con otro coche": "",
-              "Cilindrada": "999 cm3 (61 cu-in)",
-              "Potencia": "75 hp / 55 kW",
-              "Año": "2012"
-            },
-            {
-              "Motores de Gasolina": "Mii 5-doors 1.0 75HP Style Ficha Tecnica",
-              "Comparar con otro coche": "",
-              "Cilindrada": "999 cm3 (61 cu-in)",
-              "Potencia": "75 hp / 55 kW",
-              "Año": "2012"
-            },
-            {
-              "Comparar con otro coche": "",
-              "Cilindrada": "999 cm3 (61 cu-in)",
-              "Potencia": "68 hp / 50 kW",
-              "Otros": "Mii 3-doors 1.0 68HP Ecofuel Start&Stop Reference Ficha Tecnica",
-              "Año": "2014"
-            },
-            {
-              "Comparar con otro coche": "",
-              "Cilindrada": "999 cm3 (61 cu-in)",
-              "Potencia": "68 hp / 50 kW",
-              "Otros": "Mii 3-doors 1.0 68HP Ecofuel Start&Stop Style Ficha Tecnica",
-              "Año": "2014"
-            },
-            {
-              "Comparar con otro coche": "",
-              "Cilindrada": "999 cm3 (61 cu-in)",
-              "Potencia": "68 hp / 50 kW",
-              "Otros": "Mii 5-doors 1.0 68HP Ecofuel Start&Stop Reference Ficha Tecnica",
-              "Año": "2014"
-            },
-            {
-              "Comparar con otro coche": "",
-              "Cilindrada": "999 cm3 (61 cu-in)",
-              "Potencia": "68 hp / 50 kW",
-              "Otros": "Mii 5-doors 1.0 68HP Ecofuel Start&Stop Style Ficha Tecnica",
-              "Año": "2014"
             }
           ],
           "actualFinalModelName": "Seat Mii Ficha Tecnica",
           "specifications": {
             "Batalla:": "242.1 cm / 95.31 pulgadas",
-            "Consumos Medio:": "de 4.2 L/100 km / 67 MPG UK / 56 MPG US a 4.3 L/100 km / 66 MPG UK / 55 MPG US",
+            "Consumos Medio:": "4.2 L/100 km",
             "Alto:": "148.1 cm / 58.31 pulgadas",
-            "Potencia:": "de 60 PS / 59 HP / 44 kW a 83 PS / 82 HP / 61 kW",
+            "Potencia:": "de 60 PS a 83 PS",
             "Largo:": "355.6 cm / 140 pulgadas",
             "Ancho:": "164.5 cm / 64.76 pulgadas",
             "Período de producción:": "2012",
-            "Cilindrada:": "de - cm3 / - cu-in a 999 cm3 / 61 cu-in",
-            "Peso:": "de 929 kg / 2048 lbs a 1310 kg / 2888 lbs"
-          },
-          "url": "https://www.ultimatespecs.com/es/car-specs/Seat/M3635/Mii"
+            "Cilindrada:": "999 cm3",
+            "Peso:": "929 kg"
+          }
         }
-      ],
-      "imageUrl": "https://www.ultimatespecs.com/cargallery/17/3635/w170_Seat-Mii-2.jpg",
-      "url": "https://www.ultimatespecs.com/es/car-specs/Seat/M3635/Mii"
+      ]
     },
     {
       "modelName": "Ibiza",
@@ -2419,6 +2279,5 @@
       "imageUrl": "https://www.ultimatespecs.com/cargallery/17/11961/w170_Seat-Ibiza-2022-1.jpg",
       "url": "https://www.ultimatespecs.com/es/car-specs/Seat-models/Seat-Ibiza"
     }
-  ],
-  "brandName": "Seat"
+  ]
 }
