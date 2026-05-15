@@ -51,6 +51,51 @@ export interface ChatMessageResponse {
   createdAt: string;
 }
 
+export interface RepairVehicleMock {
+  id: number;
+  name: string;
+  plate: string;
+  status: string;
+}
+
+export interface Workshop {
+  id: number;
+  name: string;
+  address: string;
+  phone: string;
+  email: string;
+  schedule: string;
+  photoUrl: string;
+  vehicleLimit: number;
+  activeVehicles: number;
+  mechanicId: number;
+  mechanicName: string;
+  mechanicAvatar: string;
+  latitude: number;
+  longitude: number;
+  selectedByClient: boolean;
+  sessionUuid: string | null;
+  vehiclesInRepair: RepairVehicleMock[];
+}
+
+export interface WorkshopSelectionResponse {
+  workshop: Workshop;
+  tracking: MechanicClientTracking;
+}
+
+export interface MechanicClientTracking {
+  clientId: number;
+  clientName: string;
+  clientEmail: string;
+  clientAvatar: string;
+  carInfo: string;
+  problemDescription: string;
+  status: string;
+  latestUpdate?: string;
+  sessionUuid: string;
+  tallerAssignmentId: number;
+}
+
 // ── Vehículos ──────────────────────────────────────────────────────────────
 
 export type EngineType = 'PETROL' | 'DIESEL' | 'BEV' | 'HEV' | 'PHEV' | 'REEV';
