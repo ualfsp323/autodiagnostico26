@@ -10,7 +10,7 @@ import lombok.*;
 @Table(name = "vehicle_model")
 @Getter
 @Setter
-@ToString(exclude = {"vehicle", "personalVehicles", "engine"})
+@ToString(exclude = { "vehicle", "personalVehicles", "engine", "products" })
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -37,4 +37,11 @@ public class VehicleModel {
     @ManyToOne
     @JoinColumn(name = "idEngine")
     private Engine engine;
+
+    @ManyToMany
+    // VM_Has_Product
+    @JoinTable(name = "vm_has_product", joinColumns = @JoinColumn(name = "idVehicleModel"), inverseJoinColumns = @JoinColumn(name = "idProduct"))
+    @Builder.Default
+    private List<Product> products = new ArrayList<>();
+
 }

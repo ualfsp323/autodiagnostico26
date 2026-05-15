@@ -11,11 +11,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+
+import java.util.ArrayList;
 import java.util.List;
 import jakarta.persistence.ManyToMany;
-import jakarta.persistence.JoinTable;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.FetchType;
 
 /**
  * Entidad que representa un producto asociado a un vehículo.
@@ -24,7 +23,7 @@ import jakarta.persistence.FetchType;
 @Table(name = "product")
 @Getter
 @Setter
-@ToString(exclude = "vehicles")
+@ToString(exclude = "vehicleModels")
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -41,12 +40,13 @@ public class Product {
     private String description;
 
     // Precio del producto
-    private Double price; // Puede ser nulo
+    private Double lowRangePrice; // Puede ser nulo
+
+    private Double highRangePrice; // Puede ser nulo
 
     private String image; // Puede ser nulo
 
-    // Vehículo al que pertenece el producto
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(name = "vm_has_product", joinColumns = @JoinColumn(name = "idProduct"), inverseJoinColumns = @JoinColumn(name = "idVehicleModel"))
-    private List<Vehicle> vehicles;
+    @ManyToMany(mappedBy = "products")
+    @Builder.Default
+    private List<VehicleModel> vehicleModels = new ArrayList<>();
 }
