@@ -43,18 +43,19 @@ public class GeneralPartsInitializer implements ApplicationRunner {
                     String name = node.has("name") ? node.get("name").asText() : null;
                     String description = node.has("description") ? node.get("description").asText() : null;
                     String image = node.has("image") ? node.get("image").asText() : null;
-                    Double price = null;
+                    Double min = null;
+                    Double max = null;
                     if (node.has("priceRange")) {
                         String pr = node.get("priceRange").asText();
                         try {
                             String cleaned = pr.replaceAll("[^0-9\\-]", "");
                             if (cleaned.contains("-")) {
                                 String[] parts = cleaned.split("-", 2);
-                                double min = Double.parseDouble(parts[0]);
-                                double max = Double.parseDouble(parts[1]);
-                                price = (min + max) / 2.0;
+                                min = Double.parseDouble(parts[0]);
+                                max = Double.parseDouble(parts[1]);
                             } else {
-                                price = Double.parseDouble(cleaned);
+                                min = Double.parseDouble(cleaned);
+                                max = min;
                             }
                         } catch (Exception e) {
                             log.debug("Could not parse priceRange {} for {}: {}", pr, name, e.getMessage());
@@ -65,7 +66,8 @@ public class GeneralPartsInitializer implements ApplicationRunner {
                         Product p = Product.builder()
                                 .name(name.trim())
                                 .description(description)
-                                .price(price)
+                                .lowRangePrice(min)
+                                .highRangePrice(max)
                                 .image(image)
                                 .build();
                         productRepository.save(p);
