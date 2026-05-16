@@ -12,7 +12,11 @@ import { PerfilComponent } from './components/perfil/perfil';
 import { MisVehiculosComponent } from './components/mis-vehiculos/mis-vehiculos';
 import { LoginComponent } from './components/login/login';
 import { seguimientoGuard } from './auth/seguimiento.guard';
+import { SobreNosotros } from './components/sobre-nosotros/sobre-nosotros';
 import { authGuard } from './auth/auth.guard';
+import { Privacidad } from './components/privacidad/privacidad';
+import { Terminos } from './components/terminos/terminos';
+import { Faq } from './components/faq/faq';
 
 export const routes: Routes = [
 	{ path: '', pathMatch: 'full', redirectTo: 'login' },
@@ -26,7 +30,6 @@ export const routes: Routes = [
 		component: SeguimientoComponent,
 		canActivate: [seguimientoGuard],
 		children: [
-			{ path: '', pathMatch: 'full', redirectTo: 'chat' },
 			{ path: 'chat', component: SeguimientoChatComponent }
 		]
 	},
@@ -41,5 +44,10 @@ export const routes: Routes = [
 	{ path: 'mis-vehiculos', component: MisVehiculosComponent },
 	{ path: 'login', component: LoginComponent },
 	{ path: 'registro', component: LoginComponent },
+	{ path: 'sobre-nosotros', component: SobreNosotros },
+	{ path: 'privacidad', component: Privacidad },
+	{ path: 'terminos', component: Terminos },
+	{ path: 'faq', component: Faq },
+
 	{ path: '**', redirectTo: 'login' }
 ];
