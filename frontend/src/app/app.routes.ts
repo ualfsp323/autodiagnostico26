@@ -47,8 +47,7 @@ export const routes: Routes = [
 	{ path: 'sobre-nosotros', component: SobreNosotros },
 	{ path: 'privacidad', component: Privacidad },
 	{ path: 'terminos', component: Terminos },
-	{ path: 'terminos', component: Faq },
-
+	{ path: 'faq', component: Faq },
 
 	{ path: '**', redirectTo: 'login' }
 ];
